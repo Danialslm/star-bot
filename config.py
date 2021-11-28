@@ -1,6 +1,7 @@
 import re
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.error import BadRequest
 from telegram.ext import Filters, MessageHandler, ConversationHandler, CallbackQueryHandler
 
 import settings
@@ -72,9 +73,22 @@ def decision(update, context):
         return GET_UC_LIST
     elif query.data == 'save':
         # update uc list
-        db.set_uc_list(context.user_data['new_uc_list'])
+        new_uc_list = db.set_uc_list(context.user_data['new_uc_list'])
 
-        query.edit_message_text('لیست یوسی ها بروز شد.')
+        # send update notification for all users
+        ORDER_ADMINS = settings.ORDER_ADMINS_GAP_1 + settings.ORDER_ADMINS_GAP_2
+
+        notify_text = 'اعلانیه\n لیست جدید یوسی ها:\n\n'
+        for uc in new_uc_list:
+            notify_text += f'یوسی {uc["uc"]} قیمت {uc["price"]} تومان\n\n'
+
+        for user in ORDER_ADMINS:
+            try:
+                context.bot.send_message(user, notify_text)
+            except BadRequest:
+                continue
+
+        query.edit_message_text('لیست یوسی ها بروز و به کاربران اطلاع داده شد.')
         return ConversationHandler.END
     elif query.data == 'cancel_updating':
         query.edit_message_text('بروزرسانی لیست یوسی ها لغو شد.')

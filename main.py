@@ -63,6 +63,10 @@ def start(update, context):
     )
 
 
+def is_online(update, context):
+    update.message.reply_text('ربات انلاین است.')
+
+
 def error_handler(update, context):
     logger.error('Update "%s" caused error "%s"', update, context.error)
 
@@ -79,6 +83,7 @@ def main():
             settings.CONFIG_ADMIN,
         ]))
     )
+    dp.add_handler(CommandHandler('online', is_online))
     dp.add_handler(ordering_handler)
     dp.add_handler(show_checkout_list_handler)
     dp.add_handler(paid_handler)

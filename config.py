@@ -5,7 +5,6 @@ from telegram.ext import Filters, MessageHandler, ConversationHandler, CallbackQ
 
 import settings
 from db import db
-from utils import get_updated_user
 
 GET_UC_LIST, DECISION = range(2)
 
@@ -83,7 +82,6 @@ def decision(update, context):
 
 
 def reset_checkout_list(update, context):
-    # todo: complete this section
     uc_list = db.get_uc_list()
     users = db.get_users()
 

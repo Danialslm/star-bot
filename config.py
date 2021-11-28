@@ -114,7 +114,7 @@ def handle_reset_checkout_list(update, context):
     if query.data == 'cancel':
         query.edit_message_text('عملیات ریست کردن لیست تسویه حساب لغو شد.')
     elif query.data == 'reset':
-        db.clean_checkout_list()
+        db.clean_users()
         query.edit_message_text('لیست تسویه حساب کاربران ریست شد.')
 
 

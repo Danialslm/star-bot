@@ -7,7 +7,7 @@ from telegram.ext import Updater, CommandHandler, Filters
 
 import settings
 from config import config_uc_handler, reset_checkout_list_handler, stop_ordering_handler, start_ordering_handler, \
-    reset_checkout_list_query_handler
+    reset_checkout_list_query_handler, send_notification_handler
 from ordering import ordering_handler, show_checkout_list_handler, paid_handler
 
 # logging
@@ -44,6 +44,7 @@ def start(update, context):
                 ['ریست لیست تسویه حساب'],
                 ['قفل سفارش'],
                 ['بازکردن سفارش'],
+                ['اطلاعیه'],
             ]
     else:
         keyboard = [
@@ -53,6 +54,7 @@ def start(update, context):
             ['ریست لیست تسویه حساب'],
             ['قفل سفارش'],
             ['بازکردن سفارش'],
+            ['اطلاعیه'],
         ]
 
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
@@ -92,6 +94,7 @@ def main():
     dp.add_handler(reset_checkout_list_query_handler)
     dp.add_handler(stop_ordering_handler)
     dp.add_handler(start_ordering_handler)
+    dp.add_handler(send_notification_handler)
     dp.add_error_handler(error_handler)
 
     updater.start_polling()

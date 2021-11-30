@@ -2,12 +2,13 @@ import re
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.error import BadRequest
-from telegram.ext import Filters, MessageHandler, ConversationHandler, CallbackQueryHandler
+from telegram.ext import Filters, MessageHandler, ConversationHandler, CallbackQueryHandler, CommandHandler
 
 import settings
 from db import db
 
 GET_UC_LIST, DECISION = range(2)
+GET_NOTIFY_MSG = range(2, 3)
 
 CONFIG_UC_TEXT = (
     'لطفا لیست جدید یوسی ها را با فرمت زیر ارسال کنید.\n\n'
@@ -15,6 +16,8 @@ CONFIG_UC_TEXT = (
     '120 - 120000\n\n'
     'نکته : تعداد یوسی سمت چپ و قیمت به تومان سمت راست است.'
 )
+
+ORDER_ADMINS = settings.ORDER_ADMINS_GAP_1 + settings.ORDER_ADMINS_GAP_2
 
 
 def config_uc_list(update, context):
@@ -72,12 +75,12 @@ def decision(update, context):
         query.edit_message_text(CONFIG_UC_TEXT)
         return GET_UC_LIST
     elif query.data == 'save':
+        query.edit_message_text('لیست یوسی ها بروز و به کاربران اطلاع داده شد.')
+
         # update uc list
         new_uc_list = db.set_uc_list(context.user_data['new_uc_list'])
 
         # send update notification for all users
-        ORDER_ADMINS = settings.ORDER_ADMINS_GAP_1 + settings.ORDER_ADMINS_GAP_2
-
         notify_text = 'اعلانیه\n لیست جدید یوسی ها:\n\n'
         for uc in new_uc_list:
             notify_text += f'یوسی {uc["uc"]} قیمت {uc["price"]} تومان\n\n'
@@ -88,7 +91,6 @@ def decision(update, context):
             except BadRequest:
                 continue
 
-        query.edit_message_text('لیست یوسی ها بروز و به کاربران اطلاع داده شد.')
         return ConversationHandler.END
     elif query.data == 'cancel_updating':
         query.edit_message_text('بروزرسانی لیست یوسی ها لغو شد.')
@@ -145,6 +147,29 @@ def start_ordering(update, context):
     update.message.reply_text('فرایند سفارش یوسی شروع شد.')
 
 
+def new_notification(update, context):
+    update.message.reply_text('لطفا پیام خود را ارسال کنید.\nبرای لغو فرایند دستور /cancel را وارد کنید.')
+    return GET_NOTIFY_MSG
+
+
+def get_notify_msg(update, context):
+    update.message.reply_text('پیام شما برای همه کاربران ارسال شد.')
+
+    msg = update.message.text
+    for user in ORDER_ADMINS:
+        try:
+            context.bot.send_message(user, msg)
+        except BadRequest:
+            continue
+
+    return ConversationHandler.END
+
+
+def cancel_new_notify(update, context):
+    update.message.reply_text('فرایند لغو شد.')
+    return ConversationHandler.END
+
+
 # handlers
 config_uc_handler = ConversationHandler(
     entry_points=[
@@ -173,4 +198,18 @@ stop_ordering_handler = MessageHandler(
 start_ordering_handler = MessageHandler(
     Filters.regex('^بازکردن سفارش$') & Filters.chat([settings.CONFIG_ADMIN]),
     start_ordering,
+)
+
+send_notification_handler = ConversationHandler(
+    entry_points=[MessageHandler(
+        Filters.regex('^اطلاعیه$') & Filters.chat([settings.CONFIG_ADMIN]),
+        new_notification,
+    )],
+    states={
+        GET_NOTIFY_MSG: [MessageHandler(
+            Filters.text & ~Filters.command & Filters.chat([settings.CONFIG_ADMIN]),
+            get_notify_msg,
+        )]
+    },
+    fallbacks=[CommandHandler('cancel', cancel_new_notify)]
 )

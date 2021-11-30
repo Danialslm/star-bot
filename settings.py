@@ -35,7 +35,7 @@ ADMINS_NAME = {
     '446722152': 'Colleague 24N',
     '131444268': 'Colleague 2B',
     '313806611': 'Colleague S8',
-
+    '684245947': 'Colleague 20R',
 
     '980450342': 'Zenxy 1',
     '1645166237': 'Zenxy 2',

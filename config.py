@@ -103,6 +103,7 @@ def reset_checkout_list(update, context):
     for user, values in users.items():
         user_total_debt = 0
         user_first_name = values['first_name']
+        admin_name = settings.ADMINS_NAME.get(user)
 
         for uc in uc_list:
             for item in values['checkout_list']:
@@ -110,7 +111,8 @@ def reset_checkout_list(update, context):
                     user_total_debt += uc['price'] * item['quantity']
                     break
 
-        text += f'ادمین : {user_first_name}\n'
+        text += f'ادمین : {admin_name}\n'
+        text += f'نام : {user_first_name}\n'
         text += f'چت ایدی : {user}\n'
         text += f'بدهی : {user_total_debt}\n\n'
 

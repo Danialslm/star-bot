@@ -111,6 +111,7 @@ def reset_checkout_list(update, context):
                     break
 
         text += f'ادمین : {user_first_name}\n'
+        text += f'چت ایدی : {user}\n'
         text += f'بدهی : {user_total_debt}\n\n'
 
     keyboard = [

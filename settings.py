@@ -40,6 +40,7 @@ ADMINS_NAME = {
     '519804471': 'Colleague 10L',
     '130755453': 'Colleague 10F',
     '1935888234': 'Colleague Pubg plus',
+    '1877312791': 'Colleague 25K',
 
     '980450342': 'Zenxy 1',
     '1645166237': 'Zenxy 2',

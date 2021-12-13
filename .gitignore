@@ -2,4 +2,7 @@
 .idea
 __pycache__/
 .env
+.env.devopment
+.env.production
 database.json
+error.log

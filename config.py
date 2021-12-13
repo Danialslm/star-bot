@@ -11,7 +11,8 @@ GET_UC_LIST, DECISION = range(2)
 GET_NOTIFY_MSG = range(2, 3)
 
 CONFIG_UC_TEXT = (
-    'لطفا لیست جدید یوسی ها را با فرمت زیر ارسال کنید.\n\n'
+    'لطفا لیست جدید یوسی ها را با فرمت زیر ارسال کنید.\n'
+    'برای لغو فرایند /cancel را ارسال کنید.\n\n'
     '60 - 60000\n'
     '120 - 120000\n\n'
     'نکته : تعداد یوسی سمت چپ و قیمت به تومان سمت راست است.'
@@ -97,6 +98,11 @@ def decision(update, context):
         return ConversationHandler.END
 
 
+def cancel_update_uc_list(update, context):
+    update.message.reply_text('فرایند بروزرسانی لیست یوسی لغو شد.')
+    return ConversationHandler.END
+
+
 def reset_checkout_list(update, context):
     uc_list = db.get_uc_list()
     users = db.get_users()
@@ -173,14 +179,18 @@ def cancel_new_notify(update, context):
 # handlers
 config_uc_handler = ConversationHandler(
     entry_points=[
-        MessageHandler(Filters.regex('^بروزرسانی لیست یوسی ها$') & Filters.chat([settings.CONFIG_ADMIN]),
+        MessageHandler(Filters.regex('^بروزرسانی لیست یوسی ها$') &
+                       Filters.chat([settings.CONFIG_ADMIN]),
                        config_uc_list)
     ],
     states={
-        GET_UC_LIST: [MessageHandler(Filters.text & Filters.chat([settings.CONFIG_ADMIN]), get_new_uc_list)],
+        GET_UC_LIST: [MessageHandler(Filters.text &
+                                     ~Filters.command &
+                                     Filters.chat([settings.CONFIG_ADMIN]),
+                                     get_new_uc_list)],
         DECISION: [CallbackQueryHandler(decision)],
     },
-    fallbacks=[],
+    fallbacks=[CommandHandler('cancel', cancel_update_uc_list)],
 )
 
 reset_checkout_list_handler = MessageHandler(

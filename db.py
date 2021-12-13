@@ -1,12 +1,18 @@
 import json
+import os.path
 
 
 class Database:
     def __init__(self, filename: str = 'database.json'):
+        if not os.path.exists(filename):
+            mode = 'w+'
+        else:
+            mode = 'r'
+
         self.filename = filename
-        with open(self.filename, 'r') as database:
+        with open(self.filename, mode) as database:
             database_data = database.read()
-            # if database file doesn't have any data set 'self.database' to empty dictionary
+            # if database file doesn't have any data s  et 'self.database' to empty dictionary
             self.database = json.loads(database_data if database_data else '{}')
 
     def _save(self, data):

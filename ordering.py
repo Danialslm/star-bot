@@ -8,7 +8,8 @@ from telegram.ext import (
     MessageHandler,
     ConversationHandler,
     Filters,
-    CallbackQueryHandler
+    CallbackQueryHandler,
+    CommandHandler,
 )
 
 import settings
@@ -41,7 +42,7 @@ def new_order(update, context):
     )['checkout_list']
     context.user_data['tmp_checkout_list'] = create_tmp_checkout_list(context.user_data['checkout_list'])
 
-    update.message.reply_text('لطفا ایدی عددی و ایدی اسمی را ارسال کنید.')
+    update.message.reply_text('لطفا ایدی عددی و ایدی اسمی را ارسال کنید.\nبرای لغو فرایند /cancel را ارسال کنید.')
     return GET_CREDENTIALS
 
 
@@ -158,6 +159,11 @@ def handle_ordering(update, context):
         return HANDLE_ORDERING
 
 
+def cancel_ordering(update, context):
+    update.message.reply_text('فرایند ثبت سفارش متوقف شد.')
+    return ConversationHandler.END
+
+
 def show_checkout_list(update, context):
     uc_list = db.get_uc_list()
     checkout_list = get_updated_user(uc_list, update.message.chat_id, update.message.chat.first_name)['checkout_list']
@@ -199,10 +205,12 @@ ordering_handler = ConversationHandler(
         MessageHandler(Filters.regex('^ثبت سفارش جدید$') & Filters.chat(ORDER_ADMINS), new_order)
     ],
     states={
-        GET_CREDENTIALS: [MessageHandler(Filters.text & Filters.chat(ORDER_ADMINS), get_credentials)],
+        GET_CREDENTIALS: [
+            MessageHandler(Filters.text & ~Filters.command & Filters.chat(ORDER_ADMINS), get_credentials)
+        ],
         HANDLE_ORDERING: [CallbackQueryHandler(handle_ordering)],
     },
-    fallbacks=[],
+    fallbacks=[CommandHandler('cancel', cancel_ordering)],
 )
 
 show_checkout_list_handler = MessageHandler(

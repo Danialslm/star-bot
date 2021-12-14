@@ -172,7 +172,7 @@ def get_notify_msg(update, context):
 
 
 def cancel_new_notify(update, context):
-    update.message.reply_text('فرایند لغو شد.')
+    update.message.reply_text('فرایند ارسال اطلاعیه لغو شد.')
     return ConversationHandler.END
 
 
@@ -217,7 +217,7 @@ send_notification_handler = ConversationHandler(
     )],
     states={
         GET_NOTIFY_MSG: [MessageHandler(
-            Filters.text & ~Filters.command & Filters.chat([settings.CONFIG_ADMIN]),
+            Filters.text & ~Filters.regex('^اطلاعیه$') & ~Filters.command & Filters.chat([settings.CONFIG_ADMIN]),
             get_notify_msg,
         )]
     },

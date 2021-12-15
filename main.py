@@ -26,6 +26,8 @@ logger = logging.getLogger(__name__)
 
 ORDER_ADMINS = settings.ORDER_ADMINS_GAP_1 + settings.ORDER_ADMINS_GAP_2
 
+ADMINS = ORDER_ADMINS + [settings.NOTIFY_SENDER, settings.CONFIG_ADMIN]
+
 
 def start(update, context):
     if not settings.DEBUG:
@@ -41,6 +43,10 @@ def start(update, context):
                 ['ریست لیست تسویه حساب'],
                 ['قفل سفارش'],
                 ['بازکردن سفارش'],
+            ]
+        elif update.message.chat_id == settings.NOTIFY_SENDER:
+            keyboard = [
+                ['اطلاعیه'],
             ]
     else:
         keyboard = [
@@ -76,10 +82,7 @@ def main():
     dp.add_handler(CommandHandler(
         'start',
         start,
-        filters=Filters.chat([
-            *ORDER_ADMINS,
-            settings.CONFIG_ADMIN,
-        ]))
+        filters=Filters.chat(ADMINS))
     )
     dp.add_handler(CommandHandler('online', is_online))
     dp.add_handler(ordering_handler)

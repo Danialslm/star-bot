@@ -212,12 +212,12 @@ start_ordering_handler = MessageHandler(
 
 send_notification_handler = ConversationHandler(
     entry_points=[MessageHandler(
-        Filters.regex('^اطلاعیه$') & Filters.chat([settings.CONFIG_ADMIN]),
+        Filters.regex('^اطلاعیه$') & Filters.chat([settings.NOTIFY_SENDER]),
         new_notification,
     )],
     states={
         GET_NOTIFY_MSG: [MessageHandler(
-            Filters.text & ~Filters.regex('^اطلاعیه$') & ~Filters.command & Filters.chat([settings.CONFIG_ADMIN]),
+            Filters.text & ~Filters.regex('^اطلاعیه$') & ~Filters.command & Filters.chat([settings.NOTIFY_SENDER]),
             get_notify_msg,
         )]
     },

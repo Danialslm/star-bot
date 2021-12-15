@@ -13,6 +13,9 @@ ORDER_ADMINS_GAP_2 = config('ORDER_ADMINS_GAP_2', cast=Csv(int))
 ORDER_GROUP_CHAT_ID_2 = config('ORDER_GROUP_CHAT_ID_2', cast=int)
 ORDER_PAYER_CHAT_ID_2 = config('ORDER_PAYER_CHAT_ID_2', cast=int)
 
+
+NOTIFY_SENDER = config('NOTIFY_SENDER', cast=int)
+
 ADMINS_NAME = {
     '110630213': 'Colleague 13H',
     '112028196': 'Colleague 12H',

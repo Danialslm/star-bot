@@ -24,10 +24,7 @@ else:
     )
 logger = logging.getLogger(__name__)
 
-ORDER_ADMINS = [
-    *settings.ORDER_ADMINS_GAP_1,
-    *settings.ORDER_ADMINS_GAP_2,
-]
+ORDER_ADMINS = settings.ORDER_ADMINS_GAP_1 + settings.ORDER_ADMINS_GAP_2
 
 
 def start(update, context):
@@ -44,7 +41,6 @@ def start(update, context):
                 ['ریست لیست تسویه حساب'],
                 ['قفل سفارش'],
                 ['بازکردن سفارش'],
-                ['اطلاعیه'],
             ]
     else:
         keyboard = [

@@ -1,7 +1,6 @@
 import re
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.error import BadRequest
 from telegram.ext import Filters, MessageHandler, ConversationHandler, CallbackQueryHandler, CommandHandler
 
 import settings
@@ -76,8 +75,6 @@ def decision(update, context):
         query.edit_message_text(CONFIG_UC_TEXT)
         return GET_UC_LIST
     elif query.data == 'save':
-        query.edit_message_text('لیست یوسی ها بروز و به کاربران اطلاع داده شد.')
-
         # update uc list
         new_uc_list = db.set_uc_list(context.user_data['new_uc_list'])
 
@@ -89,9 +86,10 @@ def decision(update, context):
         for user in ORDER_ADMINS:
             try:
                 context.bot.send_message(user, notify_text)
-            except BadRequest:
-                continue
+            except Exception as e:
+                context.bot.send_message(query.message.chat_id, f'برای کاربر {user} ارسال نشد.\nدلیل : {e.message}')
 
+        query.edit_message_text('لیست یوسی ها بروز و به کاربران اطلاع داده شد.')
         return ConversationHandler.END
     elif query.data == 'cancel_updating':
         query.edit_message_text('بروزرسانی لیست یوسی ها لغو شد.')
@@ -159,15 +157,14 @@ def new_notification(update, context):
 
 
 def get_notify_msg(update, context):
-    update.message.reply_text('پیام شما برای همه کاربران ارسال شد.')
-
     msg = update.message.text
     for user in ORDER_ADMINS:
         try:
             context.bot.send_message(user, msg)
-        except BadRequest:
-            continue
+        except Exception as e:
+            context.bot.send_message(update.message.chat_id, f'برای کاربر {user} ارسال نشد.\nدلیل : {e.message}')
 
+    update.message.reply_text('پیام شما برای همه کاربران ارسال شد.')
     return ConversationHandler.END
 
 

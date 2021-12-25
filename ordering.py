@@ -110,11 +110,13 @@ def handle_ordering(update, context):
         if not context.user_data['uc_order']['UCs']:
             context.bot.answer_callback_query(query.id, text='لیست خالی است!', show_alert=True)
             return HANDLE_ORDERING
+
+        formatted_uc_list = '+'.join(uc_order['UCs'])
         # send uc order to specific chat id
         text = (
             f'ایدی عددی : {uc_order["id"]}\n'
             f'ایدی اسمی : {uc_order["nick_name"]}\n\n'
-            f'تعداد یوسی : {"+".join(uc_order["UCs"])}\n\n\n\n'
+            f'تعداد یوسی : {formatted_uc_list}\n\n\n\n'
             f'فرستنده : {chat_id}'
         )
 
@@ -133,7 +135,10 @@ def handle_ordering(update, context):
 
         db.set_user(chat_id, query.message.chat.first_name, checkout_list)
 
-        query.edit_message_text('سفارش ارسال شد.')
+        text = (
+            f'سفارش به مقدار:\n\n {formatted_uc_list}\n ارسال شد'
+        )
+        query.edit_message_text(text)
         return ConversationHandler.END
     else:
         # update uc order

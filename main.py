@@ -7,6 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from telegram import ReplyKeyboardMarkup
 from telegram.ext import Updater, CommandHandler
+
 import config
 import models
 from models import Base
@@ -31,7 +32,6 @@ logger = logging.getLogger(__name__)
 
 # create a db engine and session maker and create all tables
 engine = create_engine('sqlite:///star_bot.db', echo=bool(DEBUG))  # echo queries in debug mode
-Base.metadata.create_all(engine)
 Session = sessionmaker(bind=engine)
 
 session = Session()
@@ -52,6 +52,7 @@ def start(update, context):
             admin = session.query(models.Admin.user_chat_id).filter(
                 models.Admin.user_chat_id == chat_id,
             ).all()
+            session.close()
             # if the user does not admin, do nothing
             if not admin:
                 return
@@ -87,6 +88,9 @@ def error_handler(update, context):
 
 
 def main():
+    # create tables in database
+    Base.metadata.create_all(engine)
+
     token = env('TOKEN')
     updater = Updater(token, use_context=True)
     dp = updater.dispatcher

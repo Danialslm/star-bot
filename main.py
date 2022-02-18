@@ -30,7 +30,7 @@ logging.basicConfig(**logging_config)
 logger = logging.getLogger(__name__)
 
 # create a db engine and session maker and create all tables
-engine = create_engine('sqlite:///star_bot.db', echo=DEBUG)  # echo queries in debug mode
+engine = create_engine('sqlite:///star_bot.db', echo=bool(DEBUG))  # echo queries in debug mode
 Base.metadata.create_all(engine)
 Session = sessionmaker(bind=engine)
 

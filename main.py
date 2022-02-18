@@ -2,18 +2,18 @@
 # -*- coding: utf-8 -*-
 import logging
 
-from decouple import config
+from decouple import config as env
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from telegram import ReplyKeyboardMarkup
 from telegram.ext import Updater, CommandHandler
-
+import config
 import models
 from models import Base
 
 # environments
-CONFIG_ADMIN = config('CONFIG_ADMIN', cast=int)
-DEBUG = config('DEBUG', default=False)
+CONFIG_ADMIN = env('CONFIG_ADMIN', cast=int)
+DEBUG = env('DEBUG', default=False)
 
 # logging
 logging_config = {
@@ -39,7 +39,7 @@ session = Session()
 
 def start(update, context):
     if not DEBUG:
-        chat_id = update.message.chat_id
+        chat_id = update.effective_message.chat_id
 
         if chat_id == CONFIG_ADMIN:
             keyboard = [
@@ -72,14 +72,14 @@ def start(update, context):
         ]
 
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    update.message.reply_text(
+    update.effective_message.reply_text(
         'لطفا یکی از گزینه های زیر را انتخاب کنید.',
         reply_markup=reply_markup,
     )
 
 
 def is_online(update, context):
-    update.message.reply_text('ربات انلاین است.')
+    update.effective_message.reply_text('ربات انلاین است.')
 
 
 def error_handler(update, context):
@@ -87,7 +87,7 @@ def error_handler(update, context):
 
 
 def main():
-    token = config('TOKEN')
+    token = env('TOKEN')
     updater = Updater(token, use_context=True)
     dp = updater.dispatcher
 

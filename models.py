@@ -8,7 +8,6 @@ class User(Base):
     __tablename__ = 'users'
 
     chat_id = Column(Integer, primary_key=True)
-    full_name = Column(String, nullable=False)
 
     def __repr__(self):
         return f'<User chat_id={self.chat_id} full_name={self.full_name}>'

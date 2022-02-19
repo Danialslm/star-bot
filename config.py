@@ -74,6 +74,7 @@ def get_new_uc_list(update, context):
 def decision(update, context):
     query = update.callback_query
     if query.data == 'send_again':
+        context.user_data['new_uc_list'] = []
         query.edit_message_text(CONFIG_UC_TEXT)
         return GET_UC_LIST
     elif query.data == 'save':
@@ -95,7 +96,7 @@ def decision(update, context):
             except Exception as e:
                 context.bot.send_message(
                     query.message.chat_id,
-                    f'برای کاربر {admin.user.full_name} ارسال نشد.\nدلیل : {e.message}'
+                    f'برای کاربر {admin.admin_name} ارسال نشد.\nدلیل : {e.message}'
                 )
 
         query.edit_message_text('لیست یوسی ها بروز و به کاربران اطلاع داده شد.')

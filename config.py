@@ -23,8 +23,6 @@ session = Session()
 
 
 def config_uc_list(update, context):
-    context.user_data['new_uc_list'] = []
-
     update.message.reply_text(CONFIG_UC_TEXT)
     return GET_UC_LIST
 
@@ -96,7 +94,7 @@ def decision(update, context):
             except Exception as e:
                 context.bot.send_message(
                     query.message.chat_id,
-                    f'برای کاربر {admin.admin_name} ارسال نشد.\nدلیل : {e.message}'
+                    f'برای کاربر {admin.name} ارسال نشد.\nدلیل : {e.message}'
                 )
 
         query.edit_message_text('لیست یوسی ها بروز و به کاربران اطلاع داده شد.')

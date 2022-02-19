@@ -6,3 +6,4 @@ __pycache__/
 .env.production
 database.json
 error.log
+star_bot.db

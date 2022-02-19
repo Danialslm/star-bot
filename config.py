@@ -23,6 +23,8 @@ session = Session()
 
 
 def config_uc_list(update, context):
+    context.user_data['new_uc_list'] = []
+
     update.message.reply_text(CONFIG_UC_TEXT)
     return GET_UC_LIST
 

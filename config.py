@@ -10,13 +10,20 @@ from main import Session
 # conversation levels
 GET_UC_LIST, DECISION = range(2)
 GET_NOTIFY_MSG = range(2, 3)
+GET_ADMIN_INFO, ADD_ADMIN_COMPLETE = range(3, 5)
 
 CONFIG_UC_TEXT = (
     'لطفا لیست جدید یوسی ها را با فرمت زیر ارسال کنید.\n'
-    'برای لغو فرایند /cancel را ارسال کنید.\n\n'
     '60 - 60000\n'
     '120 - 120000\n\n'
-    'نکته : تعداد یوسی سمت چپ و قیمت به تومان سمت راست است.'
+    'نکته : تعداد یوسی سمت چپ و قیمت به تومان سمت راست است.\n\n'
+    'برای لغو فرایند /cancel را ارسال کنید.'
+)
+
+ADD_ADMIN_TEXT = (
+    'لطفا چت ایدی و نام مستعار ادمین و نام گروه (znxy یا star) را به فرمت زیر ارسال کنید:\n\n'
+    'chat id - admin name - group\n\n'
+    'برای لغو فرایند /cancel را ارسال کنید.'
 )
 
 session = Session()
@@ -111,6 +118,66 @@ def cancel_update_uc_list(update, context):
     return ConversationHandler.END
 
 
+def add_admin(update, context):
+    update.message.reply_text(ADD_ADMIN_TEXT)
+    return GET_ADMIN_INFO
+
+
+def get_admin_info(update, context):
+    admin_info = update.effective_message.text
+
+    try:
+        # validation
+        admin_info = admin_info.split('-')
+
+        # if there is more that two `-` in message text
+        if len(admin_info) > 3:
+            raise ValueError
+
+        admin_chat_id = int(admin_info[0].strip())
+        admin_name = admin_info[1].strip()
+        admin_group = admin_info[2].strip()
+
+    except (IndexError, ValueError):
+        update.message.reply_text(ADD_ADMIN_TEXT)
+        return GET_ADMIN_INFO
+    else:
+        # check that admin does not already exists
+        admin = session.query(models.Admin).filter(
+            models.Admin.chat_id == admin_chat_id,
+        ).first()
+
+        if admin:
+            text = (
+                f'این ادمین با چت ایدی {admin.chat_id} '
+                f'و نام مستعار {admin.name} '
+                f'در گروه {admin.group} '
+                'از قبل وجود دارد.'
+            )
+            update.message.reply_text(text)
+            return ConversationHandler.END
+
+        # save new admin info to database
+        admin = models.Admin(chat_id=admin_chat_id, name=admin_name, group=admin_group)
+        session.add(admin)
+        session.commit()
+        session.close()
+
+        text = (
+            f'ادمین جدید برای گروه {admin_group} با مشخصات زیر :\n'
+            f'نام ادمین : {admin_name}\n'
+            f'چت ایدی ادمین : {admin_chat_id}\n'
+            'ذخیره شد.'
+        )
+        update.message.reply_text(text)
+        return ConversationHandler.END
+
+
+def cancel_add_admin(update, context):
+    update.message.reply_text('فرایند افزودن ادمین لغو شد.')
+    return ConversationHandler.END
+
+
 # def reset_checkout_list(update, context):
 #     text = 'لیست تسویه حساب همه کاربران:\n\n'
 #     checkout_list = session.query(models.CheckoutUc). \
@@ -139,7 +206,6 @@ def cancel_update_uc_list(update, context):
 # ]
 # reply_markup = InlineKeyboardMarkup(keyboard)
 # update.message.reply_text(text, reply_markup=reply_markup, parse_mode='Markdown')
-
 
 # def handle_reset_checkout_list(update, context):
 #     query = update.callback_query
@@ -183,7 +249,6 @@ def cancel_update_uc_list(update, context):
 #     update.message.reply_text('فرایند ارسال اطلاعیه لغو شد.')
 #     return ConversationHandler.END
 
-
 # handlers
 config_uc_handler = ConversationHandler(
     entry_points=[
@@ -199,6 +264,22 @@ config_uc_handler = ConversationHandler(
         DECISION: [CallbackQueryHandler(decision)],
     },
     fallbacks=[CommandHandler('cancel', cancel_update_uc_list)],
+)
+
+add_admin_handler = ConversationHandler(
+    entry_points=[
+        MessageHandler(
+            Filters.regex('^افزودن ادمین$') & Filters.chat([CONFIG_ADMIN]),
+            add_admin,
+        )
+    ],
+    states={
+        GET_ADMIN_INFO: [MessageHandler(
+            Filters.text & ~Filters.command & Filters.chat([CONFIG_ADMIN]),
+            get_admin_info,
+        )]
+    },
+    fallbacks=[CommandHandler('cancel', cancel_add_admin)]
 )
 
 # reset_checkout_list_handler = MessageHandler(

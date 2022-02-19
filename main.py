@@ -39,6 +39,7 @@ def start(update, context):
 
         if chat_id == env.CONFIG_ADMIN:
             keyboard = [
+                ['افزودن ادمین'],
                 ['بروزرسانی لیست یوسی ها'],
                 ['ریست لیست تسویه حساب'],
                 ['قفل سفارش'],
@@ -61,6 +62,7 @@ def start(update, context):
         keyboard = [
             ['ثبت سفارش جدید'],
             ['نمایش لیست تسویه حساب'],
+            ['افزودن ادمین'],
             ['بروزرسانی لیست یوسی ها'],
             ['ریست لیست تسویه حساب'],
             ['قفل سفارش'],
@@ -97,6 +99,7 @@ def main():
     # dp.add_handler(show_checkout_list_handler)
     # dp.add_handler(paid_handler)
     dp.add_handler(config.config_uc_handler)
+    dp.add_handler(config.add_admin_handler)
     # dp.add_handler(config.reset_checkout_list_handler)
     # dp.add_handler(reset_checkout_list_query_handler)
     # dp.add_handler(stop_ordering_handler)

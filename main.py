@@ -45,8 +45,8 @@ def start(update, context):
                 ['بازکردن سفارش'],
             ]
         else:
-            admin = session.query(models.Admin.user_chat_id).filter(
-                models.Admin.user_chat_id == chat_id,
+            admin = session.query(models.Admin.chat_id).filter(
+                models.Admin.chat_id == chat_id,
             ).all()
             session.close()
             # if the user does not admin, do nothing

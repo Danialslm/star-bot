@@ -10,20 +10,10 @@ class Admin(Base):
     id = Column(Integer, primary_key=True)
     chat_id = Column(Integer, unique=True, nullable=False)
     name = Column(String, nullable=False)
+    group = Column(String, nullable=False)
 
     def __repr__(self):
         return f'<Admin id={self.id} chat_id={self.chat_id} name={self.name}>'
-
-
-class Group(Base):
-    __tablename__ = 'groups'
-
-    chat_id = Column(Integer, primary_key=True)
-    payer_id = Column(Integer, ForeignKey('admins.id'), nullable=False)
-    payer = relationship('Admin', backref=backref('group', uselist=False))
-
-    def __repr__(self):
-        return f'<Group chat_id={self.chat_id} payer_id={self.payer_id}>'
 
 
 CheckoutUc = Table(

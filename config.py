@@ -102,11 +102,11 @@ def update_uc_decision(update, context):
         admins = session.query(models.Admin).all()
         for admin in admins:
             try:
-                context.bot.send_message(admin.user_chat_id, notify_text)
+                context.bot.send_message(admin.chat_id, notify_text)
             except Exception as e:
                 context.bot.send_message(
                     query.message.chat_id,
-                    f'برای کاربر {admin.name} ارسال نشد.\nدلیل : {e.message}'
+                    f'برای کاربر {admin.name} ارسال نشد.\nدلیل : {e}'
                 )
 
         query.edit_message_text('لیست یوسی ها بروز و به کاربران اطلاع داده شد.')

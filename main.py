@@ -2,15 +2,13 @@
 # -*- coding: utf-8 -*-
 import logging
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 from telegram import ReplyKeyboardMarkup
 from telegram.ext import Updater, CommandHandler
 
 import config
 import env
 import models
-from models import Base
+from db import Session, create_tables
 
 # logging
 logging_config = {
@@ -25,10 +23,6 @@ if not env.DEBUG:
 
 logging.basicConfig(**logging_config)
 logger = logging.getLogger(__name__)
-
-# create a db engine and session maker and create all tables
-engine = create_engine('sqlite:///star_bot.db', echo=bool(env.DEBUG))  # echo queries in debug mode
-Session = sessionmaker(bind=engine)
 
 session = Session()
 
@@ -88,8 +82,7 @@ def error_handler(update, context):
 
 
 def main():
-    # create tables in database
-    Base.metadata.create_all(engine)
+    create_tables()
 
     token = env.TOKEN
     updater = Updater(token, use_context=True)

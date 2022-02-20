@@ -11,9 +11,10 @@ from env import CONFIG_ADMIN
 from main import Session
 
 # conversation levels
-GET_UC_LIST, DECISION = range(2)
-GET_NOTIFY_MSG = range(2, 3)
-GET_ADMIN_INFO, ADD_ADMIN_COMPLETE = range(3, 5)
+GET_UC_LIST, DECISION = range(2)  # update uc list
+GET_NOTIFY_MSG = range(2, 3)  # send notification
+GET_ADMIN_INFO = range(3, 4)  # add admin
+GET_ADMIN_CHAT_ID = range(4, 5)  # remove admin
 
 UPDATE_UC_LIST_TEXT = (
     'لطفا لیست جدید یوسی ها را با فرمت زیر ارسال کنید.\n'
@@ -181,6 +182,47 @@ def cancel_add_admin(update, context):
     return ConversationHandler.END
 
 
+def remove_admin(update, context):
+    update.message.reply_text('لطفا چت ایدی ادمین را برای حذف ارسال کنید.\nبرای لغو فرایند /cancel را وارد کنید.')
+    return GET_ADMIN_CHAT_ID
+
+
+def get_admin_chat_id(update, context):
+    try:
+        admin_chat_id = int(update.message.text)
+    except ValueError:
+        update.message.reply_text('چت ایدی معتبر نیست لطفا دوباره وارد کنید.')
+        return GET_ADMIN_CHAT_ID
+    else:
+        # check that admin is exist
+        admin = session.query(models.Admin).filter(
+            models.Admin.chat_id == admin_chat_id,
+        ).first()
+
+        if not admin:
+            update.message.reply_text('ادمینی با این چت ایدی وجود ندارد. لطفا چت ایدی را دوباره وارد کنید')
+            return GET_ADMIN_CHAT_ID
+
+        # remove admin from database
+        session.delete(admin)
+        session.commit()
+        session.close()
+
+        text = (
+            f'ادمین گپ {admin.group} با مشخصات زیر :\n\n'
+            f'چت ایدی : {admin.chat_id}\n'
+            f'نام مستعار : {admin.name}\n\n'
+            'حذف شد.'
+        )
+        update.message.reply_text(text)
+        return ConversationHandler.END
+
+
+def cancel_remove_admin(update, context):
+    update.message.reply_text('فرایند حذف ادمین لغو شد.')
+    return ConversationHandler.END
+
+
 # def reset_checkout_list(update, context):
 #     text = 'لیست تسویه حساب همه کاربران:\n\n'
 #     checkout_list = session.query(models.CheckoutUc). \
@@ -280,6 +322,20 @@ add_admin_handler = ConversationHandler(
         )],
     },
     fallbacks=[CommandHandler('cancel', cancel_add_admin)]
+)
+
+remove_admin_handler = ConversationHandler(
+    entry_points=[MessageHandler(
+        Filters.regex('^حذف ادمین$') & Filters.chat([CONFIG_ADMIN]),
+        remove_admin,
+    )],
+    states={
+        GET_ADMIN_CHAT_ID: [MessageHandler(
+            Filters.text & ~Filters.command & Filters.chat([CONFIG_ADMIN]),
+            get_admin_chat_id,
+        )],
+    },
+    fallbacks=[CommandHandler('cancel', cancel_remove_admin)],
 )
 
 # reset_checkout_list_handler = MessageHandler(

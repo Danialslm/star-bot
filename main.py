@@ -35,7 +35,7 @@ session = Session()
 
 def start(update, context):
     if not env.DEBUG:
-        chat_id = update.effective_message.chat_id
+        chat_id = update.message.chat_id
 
         if chat_id == env.CONFIG_ADMIN:
             keyboard = [
@@ -73,14 +73,14 @@ def start(update, context):
         ]
 
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    update.effective_message.reply_text(
+    update.message.reply_text(
         'لطفا یکی از گزینه های زیر را انتخاب کنید.',
         reply_markup=reply_markup,
     )
 
 
 def is_online(update, context):
-    update.effective_message.reply_text('ربات انلاین است.')
+    update.message.reply_text('ربات انلاین است.')
 
 
 def error_handler(update, context):

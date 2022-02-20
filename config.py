@@ -128,7 +128,7 @@ def add_admin(update, context):
 
 
 def get_admin_info(update, context):
-    admin_info = update.effective_message.text
+    admin_info = update.message.text
 
     try:
         # validation

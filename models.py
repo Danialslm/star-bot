@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Table
+from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import declarative_base, relationship, backref
 
 Base = declarative_base()
@@ -11,18 +11,18 @@ class Admin(Base):
     chat_id = Column(Integer, unique=True, nullable=False)
     name = Column(String, nullable=False)
     group = Column(String, nullable=False)
+    sold_ucs = relationship('UC', secondary='sold_ucs', backref='admin', cascade='all,delete')
 
     def __repr__(self):
         return f'<Admin id={self.id} chat_id={self.chat_id} name={self.name}>'
 
 
-CheckoutUc = Table(
-    'checkout_uc',
-    Base.metadata,
-    Column('id', Integer, primary_key=True),
-    Column('checkout_id', Integer, ForeignKey('checkouts.id'), nullable=False),
-    Column('uc_id', Integer, ForeignKey('ucs.id'), nullable=False),
-)
+class SoldUc(Base):
+    __tablename__ = 'sold_ucs'
+
+    id = Column(Integer, primary_key=True)
+    admin_id = Column(Integer, ForeignKey('admins.id'), nullable=False)
+    uc_id = Column(Integer, ForeignKey('ucs.id'), nullable=False)
 
 
 class UC(Base):
@@ -34,15 +34,3 @@ class UC(Base):
 
     def __repr__(self):
         return f'<UC id={self.id} amount={self.amount} price={self.price}>'
-
-
-class Checkout(Base):
-    __tablename__ = 'checkouts'
-
-    id = Column(Integer, primary_key=True)
-    admin_id = Column(Integer, ForeignKey('admins.id'), nullable=False)
-    admin = relationship('Admin', backref=backref('checkout', uselist=False))
-    ucs = relationship('UC', secondary=CheckoutUc, backref='checkout')
-
-    def __repr__(self):
-        return f'<Checkout admin={self.admin}>'

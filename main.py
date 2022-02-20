@@ -49,7 +49,7 @@ def start(update, context):
         else:
             admin = session.query(models.Admin.chat_id).filter(
                 models.Admin.chat_id == chat_id,
-            ).all()
+            ).first()
             session.close()
             # if the user does not admin, do nothing
             if not admin:

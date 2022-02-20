@@ -43,3 +43,6 @@ class Checkout(Base):
     admin_id = Column(Integer, ForeignKey('admins.id'), nullable=False)
     admin = relationship('Admin', backref=backref('checkout', uselist=False))
     ucs = relationship('UC', secondary=CheckoutUc, backref='checkout')
+
+    def __repr__(self):
+        return f'<Checkout admin={self.admin}>'

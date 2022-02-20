@@ -7,8 +7,8 @@ from telegram.ext import (
 )
 
 import models
+from db import Session
 from env import CONFIG_ADMIN
-from main import Session
 
 # conversation levels
 GET_UC_LIST, DECISION = range(2)  # update uc list
@@ -203,7 +203,10 @@ def get_admin_chat_id(update, context):
             update.message.reply_text('ادمینی با این چت ایدی وجود ندارد. لطفا چت ایدی را دوباره وارد کنید')
             return GET_ADMIN_CHAT_ID
 
-        # remove admin from database
+        # remove the admin and its checkout from database
+        session.query(models.SoldUc).filter(
+            models.SoldUc.admin_id == admin.id
+        ).delete()
         session.delete(admin)
         session.commit()
         session.close()

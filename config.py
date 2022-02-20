@@ -1,7 +1,10 @@
 import re
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Filters, MessageHandler, ConversationHandler, CallbackQueryHandler, CommandHandler
+from telegram.ext import (
+    Filters, MessageHandler, ConversationHandler,
+    CallbackQueryHandler, CommandHandler,
+)
 
 import models
 from env import CONFIG_ADMIN
@@ -12,7 +15,7 @@ GET_UC_LIST, DECISION = range(2)
 GET_NOTIFY_MSG = range(2, 3)
 GET_ADMIN_INFO, ADD_ADMIN_COMPLETE = range(3, 5)
 
-CONFIG_UC_TEXT = (
+UPDATE_UC_LIST_TEXT = (
     'لطفا لیست جدید یوسی ها را با فرمت زیر ارسال کنید.\n'
     '60 - 60000\n'
     '120 - 120000\n\n'
@@ -29,10 +32,10 @@ ADD_ADMIN_TEXT = (
 session = Session()
 
 
-def config_uc_list(update, context):
+def update_uc_list(update, context):
     context.user_data['new_uc_list'] = []
 
-    update.message.reply_text(CONFIG_UC_TEXT)
+    update.message.reply_text(UPDATE_UC_LIST_TEXT)
     return GET_UC_LIST
 
 
@@ -59,7 +62,7 @@ def get_new_uc_list(update, context):
             else:
                 new_uc_list.append({'amount': int(amount), 'price': int(price)})
     except (IndexError, ValueError):
-        update.message.reply_text(CONFIG_UC_TEXT)
+        update.message.reply_text(UPDATE_UC_LIST_TEXT)
         return GET_UC_LIST
     else:
         text = 'لیست یوسی ها به شکل زیر خواهد شد.\n\n'
@@ -78,11 +81,11 @@ def get_new_uc_list(update, context):
         return DECISION
 
 
-def decision(update, context):
+def update_uc_decision(update, context):
     query = update.callback_query
     if query.data == 'send_again':
         context.user_data['new_uc_list'] = []
-        query.edit_message_text(CONFIG_UC_TEXT)
+        query.edit_message_text(UPDATE_UC_LIST_TEXT)
         return GET_UC_LIST
     elif query.data == 'save':
         session.query(models.UC).delete()
@@ -251,33 +254,30 @@ def cancel_add_admin(update, context):
 
 # handlers
 config_uc_handler = ConversationHandler(
-    entry_points=[
-        MessageHandler(Filters.regex('^بروزرسانی لیست یوسی ها$') &
-                       Filters.chat([CONFIG_ADMIN]),
-                       config_uc_list)
-    ],
+    entry_points=[MessageHandler(
+        Filters.regex('^بروزرسانی لیست یوسی ها$') & Filters.chat([CONFIG_ADMIN]),
+        update_uc_list,
+    )],
     states={
-        GET_UC_LIST: [MessageHandler(Filters.text &
-                                     ~Filters.command &
-                                     Filters.chat([CONFIG_ADMIN]),
-                                     get_new_uc_list)],
-        DECISION: [CallbackQueryHandler(decision)],
+        GET_UC_LIST: [MessageHandler(
+            Filters.text & ~Filters.command & Filters.chat([CONFIG_ADMIN]),
+            get_new_uc_list,
+        )],
+        DECISION: [CallbackQueryHandler(update_uc_decision)],
     },
     fallbacks=[CommandHandler('cancel', cancel_update_uc_list)],
 )
 
 add_admin_handler = ConversationHandler(
-    entry_points=[
-        MessageHandler(
-            Filters.regex('^افزودن ادمین$') & Filters.chat([CONFIG_ADMIN]),
-            add_admin,
-        )
-    ],
+    entry_points=[MessageHandler(
+        Filters.regex('^افزودن ادمین$') & Filters.chat([CONFIG_ADMIN]),
+        add_admin,
+    )],
     states={
         GET_ADMIN_INFO: [MessageHandler(
             Filters.text & ~Filters.command & Filters.chat([CONFIG_ADMIN]),
             get_admin_info,
-        )]
+        )],
     },
     fallbacks=[CommandHandler('cancel', cancel_add_admin)]
 )

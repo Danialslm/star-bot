@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -20,7 +20,7 @@ class SoldUc(Base):
     __tablename__ = 'sold_ucs'
 
     id = Column(Integer, primary_key=True)
-    admin_id = Column(Integer, ForeignKey('admins.id'), nullable=False)
+    admin_chat_id = Column(Integer, nullable=False)
     uc_amount = Column(Integer, nullable=False)
     quantity = Column(Integer, nullable=False)
 

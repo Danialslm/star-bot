@@ -87,14 +87,14 @@ def get_credentials(update, context):
     return HANDLE_ORDERING
 
 
-def update_admin_sold_ucs(admin_id, checkout):
+def update_admin_sold_ucs(admin_chat_id, checkout):
     """ update admin sold ucs based on given checkout """
     for c in checkout:
         if c['quantity'] == 0:
             continue
 
         sold_uc_obj = session.query(models.SoldUc).filter(and_(
-            models.SoldUc.admin_id == admin_id,
+            models.SoldUc.admin_chat_id == admin_chat_id,
             models.SoldUc.uc_amount == c['amount']
         )).first()
         # if admin already sold this uc, increase its quantity.
@@ -103,7 +103,7 @@ def update_admin_sold_ucs(admin_id, checkout):
             sold_uc_obj.quantity += c['quantity']
         else:
             session.add(models.SoldUc(
-                admin_id=admin_id,
+                admin_chat_id=admin_chat_id,
                 uc_amount=c['amount'],
                 quantity=c['quantity'],
             ))
@@ -146,7 +146,7 @@ def handle_ordering(update, context):
         elif admin.group == 'znxy':
             context.bot.send_message(ZNXY_GROUP_CHAT_ID, text)
 
-        update_admin_sold_ucs(admin.id, context.user_data['tmp_checkout'])
+        update_admin_sold_ucs(chat_id, context.user_data['tmp_checkout'])
         text = (
             f'سفارش به مقدار:\n\n {formatted_ucs_amount}\n ارسال شد'
         )

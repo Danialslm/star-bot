@@ -203,9 +203,9 @@ def get_admin_chat_id(update, context):
             update.message.reply_text('ادمینی با این چت ایدی وجود ندارد. لطفا چت ایدی را دوباره وارد کنید')
             return GET_ADMIN_CHAT_ID
 
-        # remove the admin and its checkout from database
+        # remove the admin and he's/she's checkout from database
         session.query(models.SoldUc).filter(
-            models.SoldUc.admin_id == admin.id
+            models.SoldUc.admin_chat_id == admin_chat_id,
         ).delete()
         session.delete(admin)
         session.commit()

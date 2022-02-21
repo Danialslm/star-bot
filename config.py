@@ -1,3 +1,4 @@
+import os
 import re
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
@@ -262,20 +263,21 @@ def cancel_remove_admin(update, context):
 #     elif query.data == 'reset':
 #         db.clean_users()
 #         query.edit_message_text('لیست تسویه حساب کاربران ریست شد.')
-#
-#
-# def stop_ordering(update, context):
-#     db.set_ordering_state(False)
-#
-#     update.message.reply_text('فرایند سفارش یوسی متوقف شد.')
-#
-#
-# def start_ordering(update, context):
-#     db.set_ordering_state(True)
-#
-#     update.message.reply_text('فرایند سفارش یوسی شروع شد.')
-#
-#
+
+
+def stop_ordering(update, context):
+    try:
+        del os.environ['ORDERING_STATE']
+    except KeyError:
+        pass
+    update.message.reply_text('فرایند سفارش یوسی متوقف شد.')
+
+
+def start_ordering(update, context):
+    os.environ['ORDERING_STATE'] = 'open'
+    update.message.reply_text('فرایند سفارش یوسی شروع شد.')
+
+
 # def new_notification(update, context):
 #     update.message.reply_text('لطفا پیام خود را ارسال کنید.\nبرای لغو فرایند دستور /cancel را وارد کنید.')
 #     return GET_NOTIFY_MSG
@@ -347,17 +349,17 @@ remove_admin_handler = ConversationHandler(
 # )
 
 # reset_checkout_list_query_handler = CallbackQueryHandler(handle_reset_checkout_list)
-#
-# stop_ordering_handler = MessageHandler(
-#     Filters.regex('^قفل سفارش$') & Filters.chat([settings.CONFIG_ADMIN]),
-#     stop_ordering,
-# )
-#
-# start_ordering_handler = MessageHandler(
-#     Filters.regex('^بازکردن سفارش$') & Filters.chat([settings.CONFIG_ADMIN]),
-#     start_ordering,
-# )
-#
+
+stop_ordering_handler = MessageHandler(
+    Filters.regex('^قفل سفارش$') & Filters.chat([CONFIG_ADMIN]),
+    stop_ordering,
+)
+
+start_ordering_handler = MessageHandler(
+    Filters.regex('^بازکردن سفارش$') & Filters.chat([CONFIG_ADMIN]),
+    start_ordering,
+)
+
 # send_notification_handler = ConversationHandler(
 #     entry_points=[MessageHandler(
 #         Filters.regex('^اطلاعیه$') & Filters.chat([settings.NOTIFY_SENDER]),

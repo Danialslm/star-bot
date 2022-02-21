@@ -5,7 +5,6 @@ import logging
 from telegram import ReplyKeyboardMarkup
 from telegram.ext import Updater, CommandHandler
 
-import config
 import env
 import models
 from db import Session, create_tables
@@ -90,7 +89,11 @@ def main():
 
     dp.add_handler(CommandHandler('start', start))
     dp.add_handler(CommandHandler('online', is_online))
-    # dp.add_handler(ordering_handler)
+    dp.add_error_handler(error_handler)
+
+    import config
+    import ordering
+    dp.add_handler(ordering.ordering_handler)
     # dp.add_handler(show_checkout_list_handler)
     # dp.add_handler(paid_handler)
     dp.add_handler(config.config_uc_handler)
@@ -101,7 +104,6 @@ def main():
     # dp.add_handler(stop_ordering_handler)
     # dp.add_handler(start_ordering_handler)
     # dp.add_handler(send_notification_handler)
-    dp.add_error_handler(error_handler)
 
     updater.start_polling()
     updater.idle()

@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, ForeignKey
-from sqlalchemy.orm import declarative_base, relationship, backref
+from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
 
@@ -23,6 +23,7 @@ class SoldUc(Base):
     id = Column(Integer, primary_key=True)
     admin_id = Column(Integer, ForeignKey('admins.id'), nullable=False)
     uc_id = Column(Integer, ForeignKey('ucs.id'), nullable=False)
+    quantity = Column(Integer, default=0)
 
 
 class UC(Base):

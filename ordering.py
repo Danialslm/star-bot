@@ -35,6 +35,7 @@ def new_order(update, context):
         models.Admin.chat_id == update.message.chat_id,
     ).first()
     if not admin:
+        session.close()
         return ConversationHandler.END
 
     # check ordering state
@@ -127,6 +128,7 @@ def handle_ordering(update, context):
     if query.data == 'cancel_ordering':
         # cancel ordering
         query.edit_message_text('سفارش لغو شد.')
+        session.close()
         return ConversationHandler.END
 
     elif query.data == 'send_order':
@@ -187,6 +189,7 @@ def handle_ordering(update, context):
 
 def cancel_ordering(update, context):
     update.message.reply_text('فرایند ثبت سفارش متوقف شد.')
+    session.close()
     return ConversationHandler.END
 
 
@@ -210,6 +213,7 @@ def show_admin_checkout(update, context):
 
     text += f'\nمجموع مبلغ : {total_sold} هزار تومان.\n'
     update.message.reply_text(text)
+    session.close()
 
 
 def paid(update, context):

@@ -293,6 +293,7 @@ def get_notify_msg(update, context):
             context.bot.send_message(update.message.chat_id, f'برای کاربر {admin.name} ارسال نشد.\nدلیل : {e}')
 
     update.message.reply_text('پیام شما برای همه کاربران ارسال شد.')
+    session.close()
     return ConversationHandler.END
 
 

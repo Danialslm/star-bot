@@ -6,7 +6,7 @@ from telegram.ext import (
     Filters, MessageHandler, ConversationHandler,
     CallbackQueryHandler, CommandHandler,
 )
-
+from sqlalchemy.orm import joinedload
 import models
 from db import Session
 from env import CONFIG_ADMIN
@@ -231,24 +231,15 @@ def reset_admins_checkout(update, context):
     """ show admins total debt """
     text = 'لیست تسویه حساب همه کاربران:\n\n'
     admins = session.query(models.Admin).all()
-    ucs = session.query(models.UC).all()
 
     for admin in admins:
         admin_total_debt = 0
         admin_sold_ucs = session.query(models.SoldUc).filter(
             models.SoldUc.admin_chat_id == admin.chat_id,
-        )
+        ).options(joinedload(models.SoldUc.uc)).all()
 
         for sold_uc in admin_sold_ucs:
-            uc_price = 0
-
-            # get uc price
-            for uc in ucs:
-                if sold_uc.uc_amount == uc.amount:
-                    uc_price = uc.price
-                    break
-
-            admin_total_debt += uc_price * sold_uc.quantity
+            admin_total_debt += sold_uc.uc.price * sold_uc.quantity
 
         text += (
             f'ادمین : {admin.name}\n'

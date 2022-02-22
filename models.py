@@ -1,5 +1,5 @@
-from sqlalchemy import Column, Integer, String
-from sqlalchemy.orm import declarative_base
+from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
 
@@ -21,7 +21,8 @@ class SoldUc(Base):
 
     id = Column(Integer, primary_key=True)
     admin_chat_id = Column(Integer, nullable=False)
-    uc_amount = Column(Integer, nullable=False)
+    uc_id = Column(Integer, ForeignKey('ucs.id'))
+    uc = relationship('UC', cascade='all, delete')
     quantity = Column(Integer, nullable=False)
 
 

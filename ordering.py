@@ -2,6 +2,7 @@ import os
 import re
 
 from sqlalchemy import and_
+from sqlalchemy.orm import joinedload
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     MessageHandler, ConversationHandler, Filters,
@@ -96,9 +97,13 @@ def update_admin_sold_ucs(admin_chat_id, checkout):
         if c['quantity'] == 0:
             continue
 
+        uc_obj = session.query(models.UC).filter(
+            models.UC.amount == c['amount'],
+        ).first()
+
         sold_uc_obj = session.query(models.SoldUc).filter(and_(
             models.SoldUc.admin_chat_id == admin_chat_id,
-            models.SoldUc.uc_amount == c['amount']
+            models.SoldUc.uc_id == uc_obj.id,
         )).first()
         # if admin already sold this uc, increase its quantity.
         # if admin doesn't sold any same uc, create SoldUc object and add it to session
@@ -107,7 +112,7 @@ def update_admin_sold_ucs(admin_chat_id, checkout):
         else:
             session.add(models.SoldUc(
                 admin_chat_id=admin_chat_id,
-                uc_amount=c['amount'],
+                uc_id=uc_obj.id,
                 quantity=c['quantity'],
             ))
 
@@ -197,25 +202,15 @@ def show_admin_checkout(update, context):
 
     admin_sold_ucs = session.query(models.SoldUc).filter(
         models.SoldUc.admin_chat_id == chat_id,
-    ).all()
-
-    ucs = session.query(models.UC).all()
+    ).options(joinedload(models.SoldUc.uc)).all()
 
     text = ''
     total_sold = 0
 
     for sold_uc in admin_sold_ucs:
-        uc_price = 0
+        total_sold += sold_uc.uc.price * sold_uc.quantity
 
-        # get uc price
-        for uc in ucs:
-            if sold_uc.uc_amount == uc.amount:
-                uc_price = uc.price
-                break
-
-        total_sold += uc_price * sold_uc.quantity
-
-        text += f'تعداد سفارش {sold_uc.uc_amount} یوسی : {sold_uc.quantity}\n'
+        text += f'تعداد سفارش {sold_uc.uc.amount} یوسی : {sold_uc.quantity}\n'
 
     text += f'\nمجموع مبلغ : {total_sold} هزار تومان.\n'
     update.message.reply_text(text)

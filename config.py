@@ -278,26 +278,27 @@ def start_ordering(update, context):
     update.message.reply_text('فرایند سفارش یوسی شروع شد.')
 
 
-# def new_notification(update, context):
-#     update.message.reply_text('لطفا پیام خود را ارسال کنید.\nبرای لغو فرایند دستور /cancel را وارد کنید.')
-#     return GET_NOTIFY_MSG
-#
-#
-# def get_notify_msg(update, context):
-#     msg = update.message.text
-#     for user in ORDER_ADMINS:
-#         try:
-#             context.bot.send_message(user, msg)
-#         except Exception as e:
-#             context.bot.send_message(update.message.chat_id, f'برای کاربر {user} ارسال نشد.\nدلیل : {e.message}')
-#
-#     update.message.reply_text('پیام شما برای همه کاربران ارسال شد.')
-#     return ConversationHandler.END
-#
-#
-# def cancel_new_notify(update, context):
-#     update.message.reply_text('فرایند ارسال اطلاعیه لغو شد.')
-#     return ConversationHandler.END
+def new_notification(update, context):
+    update.message.reply_text('لطفا پیام خود را ارسال کنید.\nبرای لغو فرایند دستور /cancel را وارد کنید.')
+    return GET_NOTIFY_MSG
+
+
+def get_notify_msg(update, context):
+    msg = update.message.text
+    for admin in session.query(models.Admin).all():
+        try:
+            context.bot.send_message(admin.chat_id, msg)
+        except Exception as e:
+            context.bot.send_message(update.message.chat_id, f'برای کاربر {admin.name} ارسال نشد.\nدلیل : {e}')
+
+    update.message.reply_text('پیام شما برای همه کاربران ارسال شد.')
+    return ConversationHandler.END
+
+
+def cancel_new_notify(update, context):
+    update.message.reply_text('فرایند ارسال اطلاعیه لغو شد.')
+    return ConversationHandler.END
+
 
 # handlers
 config_uc_handler = ConversationHandler(
@@ -360,16 +361,16 @@ start_ordering_handler = MessageHandler(
     start_ordering,
 )
 
-# send_notification_handler = ConversationHandler(
-#     entry_points=[MessageHandler(
-#         Filters.regex('^اطلاعیه$') & Filters.chat([settings.NOTIFY_SENDER]),
-#         new_notification,
-#     )],
-#     states={
-#         GET_NOTIFY_MSG: [MessageHandler(
-#             Filters.text & ~Filters.regex('^اطلاعیه$') & ~Filters.command & Filters.chat([settings.NOTIFY_SENDER]),
-#             get_notify_msg,
-#         )]
-#     },
-#     fallbacks=[CommandHandler('cancel', cancel_new_notify)]
-# )
+send_notification_handler = ConversationHandler(
+    entry_points=[MessageHandler(
+        Filters.regex('^اطلاعیه$') & Filters.chat([CONFIG_ADMIN]),
+        new_notification,
+    )],
+    states={
+        GET_NOTIFY_MSG: [MessageHandler(
+            Filters.text & ~Filters.regex('^اطلاعیه$') & ~Filters.command & Filters.chat([CONFIG_ADMIN]),
+            get_notify_msg,
+        )]
+    },
+    fallbacks=[CommandHandler('cancel', cancel_new_notify)]
+)

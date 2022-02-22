@@ -101,8 +101,8 @@ def main():
     dp.add_handler(config.remove_admin_handler)
     dp.add_handler(config.stop_ordering_handler)
     dp.add_handler(config.start_ordering_handler)
-    # dp.add_handler(config.reset_checkout_list_handler)
-    # dp.add_handler(reset_checkout_list_query_handler)
+    dp.add_handler(config.reset_checkout_list_handler)
+    dp.add_handler(config.reset_checkout_list_query_handler)
     dp.add_handler(config.send_notification_handler)
 
     updater.start_polling()

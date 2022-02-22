@@ -227,42 +227,43 @@ def cancel_remove_admin(update, context):
     return ConversationHandler.END
 
 
-# def reset_checkout_list(update, context):
-#     text = 'لیست تسویه حساب همه کاربران:\n\n'
-#     checkout_list = session.query(models.CheckoutUc). \
-#         join(models.Checkout). \
-#         join(models.UC). \
-#         all()
-#
-#     for checkout in checkout_list:
-#         user_total_debt = 0
-#         admin_name = checkout.admin.admin_name
-#         print(admin_name)
-#     for uc in checkout.ucs.all():
-#         for item in values['checkout_list']:
-#             if uc['uc'] == item['uc']:
-#                 user_total_debt += uc['price'] * item['quantity']
-#                 break
-#
-#     text += f'ادمین : {admin_name}\n'
-#     text += f'نام : {user_first_name}\n'
-#     text += f'چت ایدی : {user}\n'
-#     text += f'بدهی : {user_total_debt}\n\n'
-#
-# keyboard = [
-#     [InlineKeyboardButton('ریست', callback_data='reset')],
-#     [InlineKeyboardButton('لغو', callback_data='cancel')],
-# ]
-# reply_markup = InlineKeyboardMarkup(keyboard)
-# update.message.reply_text(text, reply_markup=reply_markup, parse_mode='Markdown')
+def reset_admins_checkout(update, context):
+    """ show admins total debt """
+    text = 'لیست تسویه حساب همه کاربران:\n\n'
+    admins = session.query(models.Admin).all()
 
-# def handle_reset_checkout_list(update, context):
-#     query = update.callback_query
-#     if query.data == 'cancel':
-#         query.edit_message_text('عملیات ریست کردن لیست تسویه حساب لغو شد.')
-#     elif query.data == 'reset':
-#         db.clean_users()
-#         query.edit_message_text('لیست تسویه حساب کاربران ریست شد.')
+    for admin in admins:
+        admin_total_debt = 0
+        admin_sold_ucs = session.query(models.SoldUc).filter(
+            models.SoldUc.admin_chat_id == admin.chat_id,
+        )
+
+        for sold_uc in admin_sold_ucs:
+            admin_total_debt += sold_uc.uc_amount * sold_uc.quantity
+
+        text += (
+            f'ادمین : {admin.name}\n'
+            f'چت ایدی : {admin.chat_id}\n'
+            f'بدهی : {admin_total_debt}\n\n'
+        )
+    session.close()
+    keyboard = [
+        [InlineKeyboardButton('ریست', callback_data='reset')],
+        [InlineKeyboardButton('لغو', callback_data='cancel')],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    update.message.reply_text(text, reply_markup=reply_markup)
+
+
+def handle_reset_checkout_list(update, context):
+    query = update.callback_query
+    if query.data == 'cancel':
+        query.edit_message_text('عملیات ریست کردن لیست تسویه حساب لغو شد.')
+    elif query.data == 'reset':
+        session.query(models.SoldUc).delete()
+        session.commit()
+        session.close()
+        query.edit_message_text('لیست تسویه حساب کاربران ریست شد.')
 
 
 def stop_ordering(update, context):
@@ -344,12 +345,12 @@ remove_admin_handler = ConversationHandler(
     fallbacks=[CommandHandler('cancel', cancel_remove_admin)],
 )
 
-# reset_checkout_list_handler = MessageHandler(
-#     Filters.regex('^ریست لیست تسویه حساب$') & Filters.chat([CONFIG_ADMIN]),
-#     reset_checkout_list,
-# )
+reset_checkout_list_handler = MessageHandler(
+    Filters.regex('^ریست لیست تسویه حساب$') & Filters.chat([CONFIG_ADMIN]),
+    reset_admins_checkout,
+)
 
-# reset_checkout_list_query_handler = CallbackQueryHandler(handle_reset_checkout_list)
+reset_checkout_list_query_handler = CallbackQueryHandler(handle_reset_checkout_list)
 
 stop_ordering_handler = MessageHandler(
     Filters.regex('^قفل سفارش$') & Filters.chat([CONFIG_ADMIN]),

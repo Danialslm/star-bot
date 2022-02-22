@@ -40,7 +40,7 @@ def new_order(update, context):
 
     # check ordering state
     if not os.environ.get('ORDERING_STATE', False):
-        update.message.reply_text('درحال حاظر فرایند ثبت سفارش متوقف شده است.')
+        update.message.reply_text('درحال حاضر فرایند ثبت سفارش متوقف شده است.')
         return ConversationHandler.END
 
     update.message.reply_text(NEW_ORDER_TEXT)

@@ -127,7 +127,7 @@ def reset_checkout_list(update, context):
         [InlineKeyboardButton('لغو', callback_data='cancel')],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    update.message.reply_text(text, reply_markup=reply_markup, parse_mode='Markdown')
+    update.message.reply_text(text, reply_markup=reply_markup)
 
 
 def handle_reset_checkout_list(update, context):

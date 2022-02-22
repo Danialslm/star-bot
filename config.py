@@ -231,6 +231,7 @@ def reset_admins_checkout(update, context):
     """ show admins total debt """
     text = 'لیست تسویه حساب همه کاربران:\n\n'
     admins = session.query(models.Admin).all()
+    ucs = session.query(models.UC).all()
 
     for admin in admins:
         admin_total_debt = 0
@@ -239,7 +240,15 @@ def reset_admins_checkout(update, context):
         )
 
         for sold_uc in admin_sold_ucs:
-            admin_total_debt += sold_uc.uc_amount * sold_uc.quantity
+            uc_price = 0
+
+            # get uc price
+            for uc in ucs:
+                if sold_uc.uc_amount == uc.amount:
+                    uc_price = uc.price
+                    break
+
+            admin_total_debt += uc_price * sold_uc.quantity
 
         text += (
             f'ادمین : {admin.name}\n'

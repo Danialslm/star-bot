@@ -199,11 +199,21 @@ def show_admin_checkout(update, context):
         models.SoldUc.admin_chat_id == chat_id,
     ).all()
 
+    ucs = session.query(models.UC).all()
+
     text = ''
     total_sold = 0
 
     for sold_uc in admin_sold_ucs:
-        total_sold += sold_uc.uc_amount * sold_uc.quantity
+        uc_price = 0
+
+        # get uc price
+        for uc in ucs:
+            if sold_uc.uc_amount == uc.amount:
+                uc_price = uc.price
+                break
+
+        total_sold += uc_price * sold_uc.quantity
 
         text += f'تعداد سفارش {sold_uc.uc_amount} یوسی : {sold_uc.quantity}\n'
 

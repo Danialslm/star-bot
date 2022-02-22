@@ -10,7 +10,10 @@ from telegram.ext import (
 
 import models
 from db import Session
-from env import STAR_GROUP_CHAT_ID, ZNXY_GROUP_CHAT_ID
+from env import (
+    STAR_GROUP_CHAT_ID, ZNXY_GROUP_CHAT_ID,
+    PAYERS_CHAT_ID
+)
 
 # conversation levels
 GET_CREDENTIALS, HANDLE_ORDERING = range(2)
@@ -208,16 +211,16 @@ def show_admin_checkout(update, context):
     update.message.reply_text(text)
 
 
-# def paid(update, context):
-#     payer_chat_id = update.message.from_user.id
-#
-#     if payer_chat_id in PAYER_ADMINS:
-#         text = update.message.reply_to_message.text
-#         # send paid confirm message to order sender
-#         sender_chat_id = int(re.findall(r'فرستنده : (\d+)', text)[0])
-#         text += '\n\nاین لیست پرداخت شد✅.'
-#
-#         context.bot.send_message(sender_chat_id, text)
+def paid(update, context):
+    payer_chat_id = update.message.from_user.id
+
+    if payer_chat_id in PAYERS_CHAT_ID:
+        text = update.message.reply_to_message.text
+        # send paid confirm message to order sender
+        sender_chat_id = int(re.findall(r'فرستنده : (\d+)', text)[0])
+        text += '\n\nاین لیست پرداخت شد✅.'
+
+        context.bot.send_message(sender_chat_id, text)
 
 
 # handlers
@@ -241,7 +244,7 @@ show_admin_checkout_handler = MessageHandler(
     show_admin_checkout,
 )
 
-# paid_handler = MessageHandler(
-#     Filters.regex('^✅$') & Filters.chat(PAYER_GROUPS) & Filters.reply,
-#     paid,
-# )
+paid_handler = MessageHandler(
+    Filters.regex('^✅$') & Filters.chat([STAR_GROUP_CHAT_ID, ZNXY_GROUP_CHAT_ID]) & Filters.reply,
+    paid,
+)

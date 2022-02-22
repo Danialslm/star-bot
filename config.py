@@ -142,7 +142,7 @@ def get_admin_info(update, context):
 
         admin_chat_id = int(admin_info[0].strip())
         admin_name = admin_info[1].strip()
-        admin_group = admin_info[2].strip()
+        admin_group = admin_info[2].strip().lower()
 
     except (IndexError, ValueError):
         update.message.reply_text(ADD_ADMIN_TEXT)

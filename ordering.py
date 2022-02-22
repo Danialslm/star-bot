@@ -182,29 +182,32 @@ def cancel_ordering(update, context):
     return ConversationHandler.END
 
 
-# def show_checkout_list(update, context):
-#     uc_list = db.get_uc_list()
-#     checkout_list = get_updated_user(uc_list, update.message.chat_id, update.message.chat.first_name)['checkout_list']
-#     total_uc_quantity_sold = 0
-#     total_sold = 0
-#
-#     # calculate how much uc sold
-#     text = ''
-#     for uc_list_item in uc_list:
-#         for checkout_list_item in checkout_list:
-#             if uc_list_item['uc'] == checkout_list_item['uc']:
-#                 quantity = checkout_list_item['quantity']
-#
-#                 total_uc_quantity_sold += quantity
-#                 total_sold += uc_list_item['price'] * quantity
-#                 text += f'تعداد سفارش {uc_list_item["uc"]} یوسی : {quantity}\n'
-#                 break
-#
-#     text += f'\nمجموع مبلغ : {total_sold} هزار تومان.\n'
-#     text += f'تعداد کل سفارشات امروز : {total_uc_quantity_sold}'
-#     update.message.reply_text(text)
-#
-#
+def show_admin_checkout(update, context):
+    chat_id = update.message.chat_id
+
+    # check user is admin
+    admin = session.query(models.Admin.chat_id).filter(
+        models.Admin.chat_id == chat_id,
+    ).first()
+    if not admin:
+        return
+
+    admin_sold_ucs = session.query(models.SoldUc).filter(
+        models.SoldUc.admin_chat_id == chat_id,
+    ).all()
+
+    text = ''
+    total_sold = 0
+
+    for sold_uc in admin_sold_ucs:
+        total_sold += sold_uc.uc_amount * sold_uc.quantity
+
+        text += f'تعداد سفارش {sold_uc.uc_amount} یوسی : {sold_uc.quantity}\n'
+
+    text += f'\nمجموع مبلغ : {total_sold} هزار تومان.\n'
+    update.message.reply_text(text)
+
+
 # def paid(update, context):
 #     payer_chat_id = update.message.from_user.id
 #
@@ -233,11 +236,11 @@ ordering_handler = ConversationHandler(
     fallbacks=[CommandHandler('cancel', cancel_ordering)],
 )
 
-# show_checkout_list_handler = MessageHandler(
-#     Filters.regex('^نمایش لیست تسویه حساب$') & Filters.chat(ORDER_ADMINS),
-#     show_checkout_list,
-# )
-#
+show_admin_checkout_handler = MessageHandler(
+    Filters.regex('^نمایش لیست تسویه حساب$'),
+    show_admin_checkout,
+)
+
 # paid_handler = MessageHandler(
 #     Filters.regex('^✅$') & Filters.chat(PAYER_GROUPS) & Filters.reply,
 #     paid,

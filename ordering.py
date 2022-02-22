@@ -91,7 +91,7 @@ def get_credentials(update, context):
     return HANDLE_ORDERING
 
 
-def update_admin_sold_ucs(admin_chat_id, checkout):
+def update_admin_sold_ucs(admin_id, checkout):
     """ update admin sold ucs based on given checkout """
     for c in checkout:
         if c['quantity'] == 0:
@@ -102,7 +102,7 @@ def update_admin_sold_ucs(admin_chat_id, checkout):
         ).first()
 
         sold_uc_obj = session.query(models.SoldUc).filter(and_(
-            models.SoldUc.admin_chat_id == admin_chat_id,
+            models.SoldUc.admin_id == admin_id,
             models.SoldUc.uc_id == uc_obj.id,
         )).first()
         # if admin already sold this uc, increase its quantity.
@@ -111,7 +111,7 @@ def update_admin_sold_ucs(admin_chat_id, checkout):
             sold_uc_obj.quantity += c['quantity']
         else:
             session.add(models.SoldUc(
-                admin_chat_id=admin_chat_id,
+                admin_id=admin_id,
                 uc_id=uc_obj.id,
                 quantity=c['quantity'],
             ))
@@ -154,7 +154,7 @@ def handle_ordering(update, context):
         elif admin.group == 'znxy':
             context.bot.send_message(ZNXY_GROUP_CHAT_ID, text)
 
-        update_admin_sold_ucs(chat_id, context.user_data['tmp_checkout'])
+        update_admin_sold_ucs(admin.id, context.user_data['tmp_checkout'])
         text = (
             f'سفارش به مقدار:\n\n {formatted_ucs_amount}\n ارسال شد'
         )
@@ -194,20 +194,16 @@ def show_admin_checkout(update, context):
     chat_id = update.message.chat_id
 
     # check user is admin
-    admin = session.query(models.Admin.chat_id).filter(
+    admin = session.query(models.Admin).filter(
         models.Admin.chat_id == chat_id,
-    ).first()
+    ).options(joinedload(models.Admin.sold_ucs).joinedload(models.SoldUc.uc)).first()
     if not admin:
         return
-
-    admin_sold_ucs = session.query(models.SoldUc).filter(
-        models.SoldUc.admin_chat_id == chat_id,
-    ).options(joinedload(models.SoldUc.uc)).all()
 
     text = ''
     total_sold = 0
 
-    for sold_uc in admin_sold_ucs:
+    for sold_uc in admin.sold_ucs:
         total_sold += sold_uc.uc.price * sold_uc.quantity
 
         text += f'تعداد سفارش {sold_uc.uc.amount} یوسی : {sold_uc.quantity}\n'

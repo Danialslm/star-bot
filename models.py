@@ -11,6 +11,7 @@ class Admin(Base):
     chat_id = Column(Integer, unique=True, nullable=False)
     name = Column(String, nullable=False)
     group = Column(String, nullable=False)
+    sold_ucs = relationship('SoldUc', cascade='all, delete')
 
     def __repr__(self):
         return f'<Admin id={self.id} chat_id={self.chat_id} name={self.name}>'
@@ -20,9 +21,9 @@ class SoldUc(Base):
     __tablename__ = 'sold_ucs'
 
     id = Column(Integer, primary_key=True)
-    admin_chat_id = Column(Integer, nullable=False)
-    uc_id = Column(Integer, ForeignKey('ucs.id'))
-    uc = relationship('UC', cascade='all, delete')
+    admin_id = Column(Integer, ForeignKey('admins.id'), nullable=False)
+    uc_id = Column(Integer, ForeignKey('ucs.id'), nullable=False)
+    uc = relationship('UC', cascade='all, delete', passive_deletes=True)
     quantity = Column(Integer, nullable=False)
 
 

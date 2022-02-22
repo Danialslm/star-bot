@@ -1,12 +1,13 @@
 import os
 import re
 
+from sqlalchemy.orm import joinedload
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Filters, MessageHandler, ConversationHandler,
     CallbackQueryHandler, CommandHandler,
 )
-from sqlalchemy.orm import joinedload
+
 import models
 from db import Session
 from env import CONFIG_ADMIN
@@ -206,7 +207,7 @@ def get_admin_chat_id(update, context):
 
         # remove the admin and he's/she's checkout from database
         session.query(models.SoldUc).filter(
-            models.SoldUc.admin_chat_id == admin_chat_id,
+            models.SoldUc.admin_id == admin.id,
         ).delete()
         session.delete(admin)
         session.commit()
@@ -230,15 +231,14 @@ def cancel_remove_admin(update, context):
 def reset_admins_checkout(update, context):
     """ show admins total debt """
     text = 'لیست تسویه حساب همه کاربران:\n\n'
-    admins = session.query(models.Admin).all()
+    admins = session.query(models.Admin). \
+        options(joinedload(models.Admin.sold_ucs).joinedload(models.SoldUc.uc)). \
+        all()
 
     for admin in admins:
         admin_total_debt = 0
-        admin_sold_ucs = session.query(models.SoldUc).filter(
-            models.SoldUc.admin_chat_id == admin.chat_id,
-        ).options(joinedload(models.SoldUc.uc)).all()
 
-        for sold_uc in admin_sold_ucs:
+        for sold_uc in admin.sold_ucs:
             admin_total_debt += sold_uc.uc.price * sold_uc.quantity
 
         text += (

@@ -76,6 +76,9 @@ def update_uc_list(update, context):
         uc_obj = session.query(models.UC).filter(
             models.UC.amount == validated_data[0]
         ).first()
+        if not uc_obj:
+            update.message.reply_text('این یوسی از قبل وجود نداشته.')
+            return UPDATE_UC_LIST
 
         # if uc which admin wants to delete sold by any admin,
         # so its can't be deleted until admins checkout doesn't reset

@@ -20,9 +20,10 @@ from env import (
 GET_CREDENTIALS, HANDLE_ORDERING = range(2)
 
 NEW_ORDER_TEXT = (
-    'لطفا ایدی عددی و ایدی اسمی را با فرمت زیر :\n'
-    'id - nickname\n'
-    'ارسال کنید.\n'
+    'لطفا ایدی عددی و ایدی اسمی را به فرمت زیر ارسال کنید.\n'
+    '0123456789\n'
+    'starVihan\n\n'
+    'نکته : اعداد باید به حروف انگلیسی باشد'
     'برای لغو فرایند /cancel را ارسال کنید.'
 )
 
@@ -75,7 +76,7 @@ def get_credentials(update, context):
     credentials = update.message.text
     try:
         # validate given credentials
-        id_, nickname = credentials.split('-')
+        id_, nickname = credentials.split()
 
         if not bool(re.match(r'^\d+$', id_)):
             raise ValueError

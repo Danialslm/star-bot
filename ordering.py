@@ -48,7 +48,7 @@ def new_order(update, context):
 
 
 def get_credentials(update, context):
-    ucs = session.query(models.UC).all()
+    ucs = session.query(models.UC).order_by(models.UC.amount).all()
     context.user_data['order'] = {'ucs_amount': []}
     context.user_data['tmp_checkout'] = [
         {'amount': uc.amount, 'quantity': 0} for uc in ucs

@@ -277,6 +277,10 @@ def new_notification(update, context):
 
 def get_notify_msg(update, context):
     msg = update.message.text
+    if msg == 'اطلاعیه':
+        update.message.reply_text('متن پیام نمیتواند `اطلاعیه` باشد. لطفا دوباره متن پیام خود را وارد کنید.')
+        return GET_NOTIFY_MSG
+
     for admin in session.query(models.Admin).all():
         try:
             context.bot.send_message(admin.chat_id, msg)
@@ -360,7 +364,7 @@ send_notification_handler = ConversationHandler(
     )],
     states={
         GET_NOTIFY_MSG: [MessageHandler(
-            Filters.text & ~Filters.regex('^اطلاعیه$') & ~Filters.command,
+            Filters.text & ~Filters.command,
             get_notify_msg,
         )]
     },

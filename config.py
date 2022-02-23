@@ -10,7 +10,7 @@ from telegram.ext import (
 
 import models
 from db import Session
-from env import CONFIG_ADMIN
+from env import CONFIG_ADMIN, NOTIFY_SENDER_CHAT_ID
 
 # conversation levels
 UPDATE_UC_LIST = range(1)  # update uc list
@@ -359,7 +359,7 @@ start_ordering_handler = MessageHandler(
 
 send_notification_handler = ConversationHandler(
     entry_points=[MessageHandler(
-        Filters.regex('^اطلاعیه$') & Filters.chat([CONFIG_ADMIN]),
+        Filters.regex('^اطلاعیه$') & Filters.chat([NOTIFY_SENDER_CHAT_ID]),
         new_notification,
     )],
     states={

@@ -39,6 +39,10 @@ def start(update, context):
                 ['قفل سفارش'],
                 ['بازکردن سفارش'],
             ]
+        elif chat_id == env.NOTIFY_SENDER_CHAT_ID:
+            keyboard = [
+                ['اطلاعیه'],
+            ]
         else:
             admin = session.query(models.Admin.chat_id).filter(
                 models.Admin.chat_id == chat_id,

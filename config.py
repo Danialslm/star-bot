@@ -298,7 +298,7 @@ config_uc_handler = ConversationHandler(
     )],
     states={
         UPDATE_UC_LIST: [MessageHandler(
-            Filters.text | Filters.command & Filters.chat([CONFIG_ADMIN]),
+            Filters.text | Filters.command,
             update_uc_list,
         )],
     },
@@ -312,7 +312,7 @@ add_admin_handler = ConversationHandler(
     )],
     states={
         GET_ADMIN_INFO: [MessageHandler(
-            Filters.text & ~Filters.command & Filters.chat([CONFIG_ADMIN]),
+            Filters.text & ~Filters.command,
             get_admin_info,
         )],
     },
@@ -326,7 +326,7 @@ remove_admin_handler = ConversationHandler(
     )],
     states={
         GET_ADMIN_CHAT_ID: [MessageHandler(
-            Filters.text & ~Filters.command & Filters.chat([CONFIG_ADMIN]),
+            Filters.text & ~Filters.command,
             get_admin_chat_id,
         )],
     },
@@ -357,7 +357,7 @@ send_notification_handler = ConversationHandler(
     )],
     states={
         GET_NOTIFY_MSG: [MessageHandler(
-            Filters.text & ~Filters.regex('^اطلاعیه$') & ~Filters.command & Filters.chat([CONFIG_ADMIN]),
+            Filters.text & ~Filters.regex('^اطلاعیه$') & ~Filters.command,
             get_notify_msg,
         )]
     },

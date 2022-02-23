@@ -13,17 +13,18 @@ from db import Session
 from env import CONFIG_ADMIN
 
 # conversation levels
-GET_UC_LIST, DECISION = range(2)  # update uc list
-GET_NOTIFY_MSG = range(2, 3)  # send notification
-GET_ADMIN_INFO = range(3, 4)  # add admin
-GET_ADMIN_CHAT_ID = range(4, 5)  # remove admin
+UPDATE_UC_LIST = range(1)  # update uc list
+GET_NOTIFY_MSG = range(1, 2)  # send notification
+GET_ADMIN_INFO = range(2, 3)  # add admin
+GET_ADMIN_CHAT_ID = range(3, 4)  # remove admin
 
 UPDATE_UC_LIST_TEXT = (
-    'لطفا لیست جدید یوسی ها را با فرمت زیر ارسال کنید.\n'
+    'لیست یوسی فعلی :\n{current_ucs}\n'
+    'برای حذف یوسی دستور (/del مقدار یوسی) را وارد کنید. مثلا \n/del 60\n'
+    'برای افزودن یوسی جدید مقدار و قیمت یوسی را به فرمت زیر وارد کنید.\n'
     '60 - 60000\n'
-    '120 - 120000\n\n'
     'نکته : تعداد یوسی سمت چپ و قیمت به تومان سمت راست است.\n\n'
-    'برای لغو فرایند /cancel را ارسال کنید.'
+    'برای اتمام فرایند /done را ارسال کنید.'
 )
 
 ADD_ADMIN_TEXT = (
@@ -35,93 +36,80 @@ ADD_ADMIN_TEXT = (
 session = Session()
 
 
+def get_updated_ucs_detail():
+    """ get updated uc list detail in specific text format """
+    ucs = session.query(models.UC).order_by(models.UC.amount).all()
+    text = ''
+    for uc in ucs:
+        text += (
+            f'یوسی : {uc.amount} - قیمت : {uc.price}\n'
+        )
+    return text
+
+
+def start_updating_uc_list(update, context):
+    update.message.reply_text(UPDATE_UC_LIST_TEXT.format(current_ucs=get_updated_ucs_detail()))
+    return UPDATE_UC_LIST
+
+
 def update_uc_list(update, context):
-    context.user_data['new_uc_list'] = []
-
-    update.message.reply_text(UPDATE_UC_LIST_TEXT)
-    return GET_UC_LIST
-
-
-def get_new_uc_list(update, context):
-    new_uc_list = context.user_data['new_uc_list']
+    """
+    update uc list in interactive mode.
+    user can delete a uc with `/del uc_amount` command,
+    and can add new uc with sending uc details in `uc_amount - uc_price` format.
+    the session will be close when use send `/cancel` command
+    """
     text = update.message.text
+    if update.message.entities and update.message.entities[0]['type'] == 'bot_command':
+        if text == '/done':
+            session.close()
+            update.message.reply_text('فرایند بروزرسانی لیست یوسی به اتمام رسید و تغییرات ذخیره شد.')
+            return ConversationHandler.END
 
-    # remove additional new line
-    text = re.sub(r'\n+', '\n', text)
+        # find uc amount in command
+        validated_data = re.findall(r'^/del (\d+)$', text)
+        if not validated_data:
+            update.message.reply_text('فرمت نامعتبر است لطفا دوباره امتحان کنید.\nفرمت معتبر :\n/del 60')
+            return UPDATE_UC_LIST
 
-    # validate given data
-    try:
-        validate = lambda x: bool(re.match(r'^\d+$', x))
+        # get the uc object by given uc amount
+        uc_obj = session.query(models.UC).filter(
+            models.UC.amount == validated_data[0]
+        ).first()
 
-        text = text.split('\n')
+        # if uc which admin wants to delete sold by any admin,
+        # so its can't be deleted until admins checkout doesn't reset
+        sold_uc = session.query(models.SoldUc).filter(
+            models.SoldUc.uc_id == uc_obj.id,
+        ).first()
 
-        for i in text:
-            i = i.split('-')
-            amount = i[0].strip()
-            price = i[1].strip()
+        if sold_uc:
+            text = (
+                'درحال حاضر این یوسی در لیست تسویه حساب ادمینی قرار دارد و امکان حذف آن وجود ندارد.\n'
+                'برای حذف آن لطفا لیست تسویه حساب را ریست کنید.'
+            )
+            update.message.reply_text(text)
+            return UPDATE_UC_LIST
 
-            if not (validate(amount) and validate(price)):
-                raise ValueError
-            else:
-                new_uc_list.append({'amount': int(amount), 'price': int(price)})
-    except (IndexError, ValueError):
-        update.message.reply_text(UPDATE_UC_LIST_TEXT)
-        return GET_UC_LIST
-    else:
-        text = 'لیست یوسی ها به شکل زیر خواهد شد.\n\n'
-        for i in context.user_data['new_uc_list']:
-            text += f'یوسی : {i["amount"]}\n'
-            text += f'قیمت : {i["price"]} تومان\n\n'
-
-        keyboard = [
-            [InlineKeyboardButton('ارسال دوباره', callback_data='send_again')],
-            [InlineKeyboardButton('ذخیره', callback_data='save')],
-            [InlineKeyboardButton('لغو بروزرسانی', callback_data='cancel_updating')]
-        ]
-
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        update.message.reply_text(text, reply_markup=reply_markup)
-        return DECISION
-
-
-def update_uc_decision(update, context):
-    query = update.callback_query
-    if query.data == 'send_again':
-        context.user_data['new_uc_list'] = []
-        query.edit_message_text(UPDATE_UC_LIST_TEXT)
-        return GET_UC_LIST
-    elif query.data == 'save':
-        session.query(models.UC).delete()
-
-        notify_text = 'اعلانیه\n لیست جدید یوسی ها:\n\n'
-        for uc in context.user_data['new_uc_list']:
-            session.add(models.UC(**uc))
-            notify_text += f'یوسی {uc["amount"]} قیمت {uc["price"]} تومان\n\n'
-
+        session.delete(uc_obj)
         session.commit()
-        session.close()
 
-        # send update notification for all admins
-        admins = session.query(models.Admin).all()
-        for admin in admins:
-            try:
-                context.bot.send_message(admin.chat_id, notify_text)
-            except Exception as e:
-                context.bot.send_message(
-                    query.message.chat_id,
-                    f'برای کاربر {admin.name} ارسال نشد.\nدلیل : {e}'
-                )
+        update.message.reply_text(UPDATE_UC_LIST_TEXT.format(current_ucs=get_updated_ucs_detail()))
+        return UPDATE_UC_LIST
+    else:
+        # validate and find uc amount and uc price from text
+        validated_data = re.findall(r'^(\d+)[^\S\t\n\r]*-[^\S\t\n\r]*(\d+)$', text)
+        if not validated_data:
+            update.message.reply_text('فرمت نامعتبر است لطفا دوباره امتحان کنید.\nفرمت معتبر :\n60 - 60000')
+            return UPDATE_UC_LIST
 
-        query.edit_message_text('لیست یوسی ها بروز و به کاربران اطلاع داده شد.')
-        return ConversationHandler.END
-    elif query.data == 'cancel_updating':
-        query.edit_message_text('بروزرسانی لیست یوسی ها لغو شد.')
-        return ConversationHandler.END
+        uc_amount, uc_price = validated_data[0]
+        uc_obj = models.UC(amount=uc_amount, price=uc_price)
+        session.add(uc_obj)
+        session.commit()
 
-
-def cancel_update_uc_list(update, context):
-    update.message.reply_text('فرایند بروزرسانی لیست یوسی لغو شد.')
-    return ConversationHandler.END
+        update.message.reply_text(UPDATE_UC_LIST_TEXT.format(current_ucs=get_updated_ucs_detail()))
+        return UPDATE_UC_LIST
 
 
 def add_admin(update, context):
@@ -306,16 +294,15 @@ def cancel_new_notify(update, context):
 config_uc_handler = ConversationHandler(
     entry_points=[MessageHandler(
         Filters.regex('^بروزرسانی لیست یوسی ها$') & Filters.chat([CONFIG_ADMIN]),
-        update_uc_list,
+        start_updating_uc_list,
     )],
     states={
-        GET_UC_LIST: [MessageHandler(
-            Filters.text & ~Filters.command & Filters.chat([CONFIG_ADMIN]),
-            get_new_uc_list,
+        UPDATE_UC_LIST: [MessageHandler(
+            Filters.text | Filters.command & Filters.chat([CONFIG_ADMIN]),
+            update_uc_list,
         )],
-        DECISION: [CallbackQueryHandler(update_uc_decision)],
     },
-    fallbacks=[CommandHandler('cancel', cancel_update_uc_list)],
+    fallbacks=[],
 )
 
 add_admin_handler = ConversationHandler(

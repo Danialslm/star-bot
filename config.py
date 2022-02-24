@@ -140,6 +140,10 @@ def get_admin_info(update, context):
         admin_name = admin_info[1].strip()
         admin_group = admin_info[2].strip().lower()
 
+        # the admin group must be star or znxy
+        if admin_group != 'star' and admin_group != 'znxy':
+            raise ValueError
+
     except (IndexError, ValueError):
         update.message.reply_text(ADD_ADMIN_TEXT)
         return GET_ADMIN_INFO

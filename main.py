@@ -100,7 +100,7 @@ def main():
     dp.add_handler(ordering.ordering_handler)
     dp.add_handler(ordering.show_admin_checkout_handler)
     dp.add_handler(ordering.paid_handler)
-    dp.add_handler(config.config_uc_handler)
+    dp.add_handler(config.update_uc_list_handler)
     dp.add_handler(config.add_admin_handler)
     dp.add_handler(config.remove_admin_handler)
     dp.add_handler(config.stop_ordering_handler)

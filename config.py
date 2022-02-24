@@ -36,6 +36,13 @@ session = Session()
 
 
 def start_updating_uc_list(update, context):
+    # updating uc list is allowed when the admins doesn't sold any ucs
+    sold_ucs = session.query(models.SoldUc).first()
+    if sold_ucs:
+        session.close()
+        update.message.reply_text('برای اپدیت کردن لیست یوسی لطفا لیست تسویه حساب کاربران را ریست کنید.')
+        return ConversationHandler.END
+
     update.message.reply_text(UPDATE_UC_LIST_TEXT)
     return GET_UC_LIST
 

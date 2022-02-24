@@ -3,55 +3,65 @@
 import logging
 
 from telegram import ReplyKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, Filters
+from telegram.ext import Updater, CommandHandler
 
-import settings
-from config import config_uc_handler, reset_checkout_list_handler, stop_ordering_handler, start_ordering_handler, \
-    reset_checkout_list_query_handler, send_notification_handler
-from ordering import ordering_handler, show_checkout_list_handler, paid_handler
+import env
+import models
+from db import Session, create_tables
 
 # logging
-if settings.DEBUG:
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    )
-else:
-    logging.basicConfig(
-        level=logging.ERROR,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        filename='error.log'
-    )
+logging_config = {
+    'level': logging.DEBUG,
+    'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+}
+if not env.DEBUG:
+    logging_config.update({
+        'level': logging.ERROR,
+        'filename': 'log/error.log',
+    })
+
+logging.basicConfig(**logging_config)
 logger = logging.getLogger(__name__)
 
-ORDER_ADMINS = settings.ORDER_ADMINS_GAP_1 + settings.ORDER_ADMINS_GAP_2
-
-ADMINS = ORDER_ADMINS + [settings.NOTIFY_SENDER, settings.CONFIG_ADMIN]
+session = Session()
 
 
 def start(update, context):
-    if not settings.DEBUG:
-        keyboard = []
-        if update.message.chat_id in ORDER_ADMINS:
+    if not env.DEBUG:
+        chat_id = update.message.chat_id
+
+        if chat_id == env.CONFIG_ADMIN:
             keyboard = [
-                ['ثبت سفارش جدید'],
-                ['نمایش لیست تسویه حساب'],
-            ]
-        elif update.message.chat_id == settings.CONFIG_ADMIN:
-            keyboard = [
+                ['افزودن ادمین'],
+                ['حذف ادمین'],
                 ['بروزرسانی لیست یوسی ها'],
                 ['ریست لیست تسویه حساب'],
                 ['قفل سفارش'],
                 ['بازکردن سفارش'],
             ]
-        elif update.message.chat_id == settings.NOTIFY_SENDER:
+        elif chat_id == env.NOTIFY_SENDER_CHAT_ID:
             keyboard = [
                 ['اطلاعیه'],
+            ]
+        else:
+            admin = session.query(models.Admin.chat_id).filter(
+                models.Admin.chat_id == chat_id,
+            ).first()
+            session.close()
+            # if the user does not admin, do nothing
+            if not admin:
+                return
+
+            keyboard = [
+                ['ثبت سفارش جدید'],
+                ['نمایش لیست تسویه حساب'],
             ]
     else:
         keyboard = [
             ['ثبت سفارش جدید'],
             ['نمایش لیست تسویه حساب'],
+            ['افزودن ادمین'],
+            ['حذف ادمین'],
             ['بروزرسانی لیست یوسی ها'],
             ['ریست لیست تسویه حساب'],
             ['قفل سفارش'],
@@ -60,7 +70,6 @@ def start(update, context):
         ]
 
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-
     update.message.reply_text(
         'لطفا یکی از گزینه های زیر را انتخاب کنید.',
         reply_markup=reply_markup,
@@ -76,25 +85,29 @@ def error_handler(update, context):
 
 
 def main():
-    updater = Updater(settings.TOKEN, use_context=True)
+    create_tables()
+
+    token = env.TOKEN
+    updater = Updater(token, use_context=True)
     dp = updater.dispatcher
 
-    dp.add_handler(CommandHandler(
-        'start',
-        start,
-        filters=Filters.chat(ADMINS))
-    )
+    dp.add_handler(CommandHandler('start', start))
     dp.add_handler(CommandHandler('online', is_online))
-    dp.add_handler(ordering_handler)
-    dp.add_handler(show_checkout_list_handler)
-    dp.add_handler(paid_handler)
-    dp.add_handler(config_uc_handler)
-    dp.add_handler(reset_checkout_list_handler)
-    dp.add_handler(reset_checkout_list_query_handler)
-    dp.add_handler(stop_ordering_handler)
-    dp.add_handler(start_ordering_handler)
-    dp.add_handler(send_notification_handler)
     dp.add_error_handler(error_handler)
+
+    import config
+    import ordering
+    dp.add_handler(ordering.ordering_handler)
+    dp.add_handler(ordering.show_admin_checkout_handler)
+    dp.add_handler(ordering.paid_handler)
+    dp.add_handler(config.update_uc_list_handler)
+    dp.add_handler(config.add_admin_handler)
+    dp.add_handler(config.remove_admin_handler)
+    dp.add_handler(config.stop_ordering_handler)
+    dp.add_handler(config.start_ordering_handler)
+    dp.add_handler(config.reset_checkout_list_handler)
+    dp.add_handler(config.reset_checkout_list_query_handler)
+    dp.add_handler(config.send_notification_handler)
 
     updater.start_polling()
     updater.idle()

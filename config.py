@@ -1,34 +1,47 @@
+import os
 import re
 
+from sqlalchemy.orm import joinedload
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Filters, MessageHandler, ConversationHandler, CallbackQueryHandler, CommandHandler
+from telegram.ext import (
+    Filters, MessageHandler, ConversationHandler,
+    CallbackQueryHandler, CommandHandler,
+)
 
-import settings
-from db import db
+import models
+from db import Session
+from env import CONFIG_ADMIN, NOTIFY_SENDER_CHAT_ID
 
-GET_UC_LIST, DECISION = range(2)
-GET_NOTIFY_MSG = range(2, 3)
+# conversation levels
+GET_UC_LIST, DECISION = range(2)  # update uc list
+GET_NOTIFY_MSG = range(2, 3)  # send notification
+GET_ADMIN_INFO = range(3, 4)  # add admin
+GET_ADMIN_CHAT_ID = range(4, 5)  # remove admin
 
-CONFIG_UC_TEXT = (
+UPDATE_UC_LIST_TEXT = (
     'لطفا لیست جدید یوسی ها را با فرمت زیر ارسال کنید.\n'
-    'برای لغو فرایند /cancel را ارسال کنید.\n\n'
     '60 - 60000\n'
     '120 - 120000\n\n'
+    'برای لغو فرایند /cancel را ارسال کنید.\n'
     'نکته : تعداد یوسی سمت چپ و قیمت به تومان سمت راست است.'
 )
 
-ORDER_ADMINS = settings.ORDER_ADMINS_GAP_1 + settings.ORDER_ADMINS_GAP_2
+ADD_ADMIN_TEXT = (
+    'لطفا چت ایدی و نام مستعار ادمین و نام گروه (znxy یا star) را به فرمت زیر ارسال کنید:\n\n'
+    'chat id - admin name - group\n\n'
+    'برای لغو فرایند /cancel را ارسال کنید.'
+)
+
+session = Session()
 
 
-def config_uc_list(update, context):
-    context.user_data['new_uc_list'] = []
-
-    update.message.reply_text(CONFIG_UC_TEXT)
+def start_updating_uc_list(update, context):
+    update.message.reply_text(UPDATE_UC_LIST_TEXT)
     return GET_UC_LIST
 
 
 def get_new_uc_list(update, context):
-    new_uc_list = context.user_data['new_uc_list']
+    context.user_data['new_uc_list'] = []
     text = update.message.text
 
     # remove additional new line
@@ -40,23 +53,23 @@ def get_new_uc_list(update, context):
 
         text = text.split('\n')
 
-        for i in text:
-            i = i.split('-')
-            uc = i[0].strip()
-            price = i[1].strip()
+        for uc_row in text:
+            uc_row = uc_row.split('-')
+            amount = uc_row[0].strip()
+            price = uc_row[1].strip()
 
-            if not (validate(uc) and validate(price)):
+            if not (validate(amount) and validate(price)):
                 raise ValueError
             else:
-                new_uc_list.append({'uc': int(uc), 'price': int(price)})
+                context.user_data['new_uc_list'].append({'amount': amount, 'price': price})
     except (IndexError, ValueError):
-        update.message.reply_text(CONFIG_UC_TEXT)
+        update.message.reply_text(UPDATE_UC_LIST_TEXT)
         return GET_UC_LIST
     else:
         text = 'لیست یوسی ها به شکل زیر خواهد شد.\n\n'
-        for i in context.user_data['new_uc_list']:
-            text += f'یوسی : {i["uc"]}\n'
-            text += f'قیمت : {i["price"]} تومان\n\n'
+        for uc in context.user_data['new_uc_list']:
+            text += f'یوسی : {uc["amount"]}\n'
+            text += f'قیمت : {uc["price"]} تومان\n\n'
 
         keyboard = [
             [InlineKeyboardButton('ارسال دوباره', callback_data='send_again')],
@@ -69,26 +82,31 @@ def get_new_uc_list(update, context):
         return DECISION
 
 
-def decision(update, context):
+def uc_list_update_decision(update, context):
     query = update.callback_query
     if query.data == 'send_again':
-        query.edit_message_text(CONFIG_UC_TEXT)
+        query.edit_message_text(UPDATE_UC_LIST_TEXT)
         return GET_UC_LIST
     elif query.data == 'save':
         # update uc list
-        new_uc_list = db.set_uc_list(context.user_data['new_uc_list'])
+        # delete old ucs from database and insert new ucs
+        session.query(models.UC).delete()
 
-        # send update notification for all users
         notify_text = 'اعلانیه\n لیست جدید یوسی ها:\n\n'
-        for uc in new_uc_list:
-            notify_text += f'یوسی {uc["uc"]} قیمت {uc["price"]} تومان\n\n'
+        for uc in context.user_data['new_uc_list']:
+            session.add(models.UC(**uc))
 
-        for user in ORDER_ADMINS:
+            notify_text += f'یوسی {uc["amount"]} قیمت {uc["price"]} تومان\n\n'
+        session.commit()
+
+        # send update notification for admins
+        for admin in session.query(models.Admin).all():
             try:
-                context.bot.send_message(user, notify_text)
+                context.bot.send_message(admin.chat_id, notify_text)
             except Exception as e:
-                context.bot.send_message(query.message.chat_id, f'برای کاربر {user} ارسال نشد.\nدلیل : {e.message}')
+                context.bot.send_message(query.message.chat_id, f'برای کاربر {admin.name} ارسال نشد.\nدلیل : {e}')
 
+        session.close()
         query.edit_message_text('لیست یوسی ها بروز و به کاربران اطلاع داده شد.')
         return ConversationHandler.END
     elif query.data == 'cancel_updating':
@@ -97,31 +115,138 @@ def decision(update, context):
 
 
 def cancel_update_uc_list(update, context):
+    session.close()
     update.message.reply_text('فرایند بروزرسانی لیست یوسی لغو شد.')
     return ConversationHandler.END
 
 
-def reset_checkout_list(update, context):
-    uc_list = db.get_uc_list()
-    users = db.get_users()
+def add_admin(update, context):
+    update.message.reply_text(ADD_ADMIN_TEXT)
+    return GET_ADMIN_INFO
 
+
+def get_admin_info(update, context):
+    admin_info = update.message.text
+
+    try:
+        # validation
+        admin_info = admin_info.split('-')
+
+        # if there is more that two `-` in message text
+        if len(admin_info) > 3:
+            raise ValueError
+
+        admin_chat_id = int(admin_info[0].strip())
+        admin_name = admin_info[1].strip()
+        admin_group = admin_info[2].strip().lower()
+
+        # the admin group must be star or znxy
+        if admin_group != 'star' and admin_group != 'znxy':
+            raise ValueError
+
+    except (IndexError, ValueError):
+        update.message.reply_text(ADD_ADMIN_TEXT)
+        return GET_ADMIN_INFO
+    else:
+        # check that admin does not already exists
+        admin = session.query(models.Admin).filter(
+            models.Admin.chat_id == admin_chat_id,
+        ).first()
+
+        if admin:
+            text = (
+                f'این ادمین با چت ایدی {admin.chat_id} '
+                f'و نام مستعار {admin.name} '
+                f'در گروه {admin.group} '
+                'از قبل وجود دارد.'
+            )
+            update.message.reply_text(text)
+            return ConversationHandler.END
+
+        # save new admin info to database
+        admin = models.Admin(chat_id=admin_chat_id, name=admin_name, group=admin_group)
+        session.add(admin)
+        session.commit()
+        session.close()
+
+        text = (
+            f'ادمین جدید برای گروه {admin_group} با مشخصات زیر :\n'
+            f'نام ادمین : {admin_name}\n'
+            f'چت ایدی ادمین : {admin_chat_id}\n'
+            'ذخیره شد.'
+        )
+        update.message.reply_text(text)
+        return ConversationHandler.END
+
+
+def cancel_add_admin(update, context):
+    update.message.reply_text('فرایند افزودن ادمین لغو شد.')
+    return ConversationHandler.END
+
+
+def remove_admin(update, context):
+    update.message.reply_text('لطفا چت ایدی ادمین را برای حذف ارسال کنید.\nبرای لغو فرایند /cancel را وارد کنید.')
+    return GET_ADMIN_CHAT_ID
+
+
+def get_admin_chat_id(update, context):
+    try:
+        admin_chat_id = int(update.message.text)
+    except ValueError:
+        update.message.reply_text('چت ایدی معتبر نیست لطفا دوباره وارد کنید.')
+        return GET_ADMIN_CHAT_ID
+    else:
+        # check that admin is exist
+        admin = session.query(models.Admin).filter(
+            models.Admin.chat_id == admin_chat_id,
+        ).first()
+
+        if not admin:
+            update.message.reply_text('ادمینی با این چت ایدی وجود ندارد. لطفا چت ایدی را دوباره وارد کنید')
+            return GET_ADMIN_CHAT_ID
+
+        # remove the admin and he's/she's checkout from database
+        session.query(models.SoldUc).filter(
+            models.SoldUc.admin_id == admin.id,
+        ).delete()
+        session.delete(admin)
+        session.commit()
+        session.close()
+
+        text = (
+            f'ادمین گپ {admin.group} با مشخصات زیر :\n\n'
+            f'چت ایدی : {admin.chat_id}\n'
+            f'نام مستعار : {admin.name}\n\n'
+            'حذف شد.'
+        )
+        update.message.reply_text(text)
+        return ConversationHandler.END
+
+
+def cancel_remove_admin(update, context):
+    update.message.reply_text('فرایند حذف ادمین لغو شد.')
+    return ConversationHandler.END
+
+
+def reset_admins_checkout(update, context):
+    """ show admins total debt """
     text = 'لیست تسویه حساب همه کاربران:\n\n'
-    for user, values in users.items():
-        user_total_debt = 0
-        user_first_name = values['first_name']
-        admin_name = settings.ADMINS_NAME.get(user)
+    admins = session.query(models.Admin). \
+        options(joinedload(models.Admin.sold_ucs).joinedload(models.SoldUc.uc)). \
+        all()
 
-        for uc in uc_list:
-            for item in values['checkout_list']:
-                if uc['uc'] == item['uc']:
-                    user_total_debt += uc['price'] * item['quantity']
-                    break
+    for admin in admins:
+        admin_total_debt = 0
 
-        text += f'ادمین : {admin_name}\n'
-        text += f'نام : {user_first_name}\n'
-        text += f'چت ایدی : {user}\n'
-        text += f'بدهی : {user_total_debt}\n\n'
+        for sold_uc in admin.sold_ucs:
+            admin_total_debt += sold_uc.uc.price * sold_uc.quantity
 
+        text += (
+            f'ادمین : {admin.name}\n'
+            f'چت ایدی : {admin.chat_id}\n'
+            f'بدهی : {admin_total_debt}\n\n'
+        )
+    session.close()
     keyboard = [
         [InlineKeyboardButton('ریست', callback_data='reset')],
         [InlineKeyboardButton('لغو', callback_data='cancel')],
@@ -135,19 +260,22 @@ def handle_reset_checkout_list(update, context):
     if query.data == 'cancel':
         query.edit_message_text('عملیات ریست کردن لیست تسویه حساب لغو شد.')
     elif query.data == 'reset':
-        db.clean_users()
+        session.query(models.SoldUc).delete()
+        session.commit()
+        session.close()
         query.edit_message_text('لیست تسویه حساب کاربران ریست شد.')
 
 
 def stop_ordering(update, context):
-    db.set_ordering_state(False)
-
+    try:
+        del os.environ['ORDERING_STATE']
+    except KeyError:
+        pass
     update.message.reply_text('فرایند سفارش یوسی متوقف شد.')
 
 
 def start_ordering(update, context):
-    db.set_ordering_state(True)
-
+    os.environ['ORDERING_STATE'] = 'open'
     update.message.reply_text('فرایند سفارش یوسی شروع شد.')
 
 
@@ -158,13 +286,18 @@ def new_notification(update, context):
 
 def get_notify_msg(update, context):
     msg = update.message.text
-    for user in ORDER_ADMINS:
+    if msg == 'اطلاعیه':
+        update.message.reply_text('متن پیام نمیتواند `اطلاعیه` باشد. لطفا دوباره متن پیام خود را وارد کنید.')
+        return GET_NOTIFY_MSG
+
+    for admin in session.query(models.Admin).all():
         try:
-            context.bot.send_message(user, msg)
+            context.bot.send_message(admin.chat_id, msg)
         except Exception as e:
-            context.bot.send_message(update.message.chat_id, f'برای کاربر {user} ارسال نشد.\nدلیل : {e.message}')
+            context.bot.send_message(update.message.chat_id, f'برای کاربر {admin.name} ارسال نشد.\nدلیل : {e}')
 
     update.message.reply_text('پیام شما برای همه کاربران ارسال شد.')
+    session.close()
     return ConversationHandler.END
 
 
@@ -174,47 +307,74 @@ def cancel_new_notify(update, context):
 
 
 # handlers
-config_uc_handler = ConversationHandler(
-    entry_points=[
-        MessageHandler(Filters.regex('^بروزرسانی لیست یوسی ها$') &
-                       Filters.chat([settings.CONFIG_ADMIN]),
-                       config_uc_list)
-    ],
+update_uc_list_handler = ConversationHandler(
+    entry_points=[MessageHandler(
+        Filters.regex('^بروزرسانی لیست یوسی ها$') & Filters.chat([CONFIG_ADMIN]),
+        start_updating_uc_list,
+    )],
     states={
-        GET_UC_LIST: [MessageHandler(Filters.text &
-                                     ~Filters.command &
-                                     Filters.chat([settings.CONFIG_ADMIN]),
-                                     get_new_uc_list)],
-        DECISION: [CallbackQueryHandler(decision)],
+        GET_UC_LIST: [MessageHandler(
+            Filters.text & ~Filters.command,
+            get_new_uc_list,
+        )],
+        DECISION: [CallbackQueryHandler(uc_list_update_decision)]
     },
     fallbacks=[CommandHandler('cancel', cancel_update_uc_list)],
 )
 
+add_admin_handler = ConversationHandler(
+    entry_points=[MessageHandler(
+        Filters.regex('^افزودن ادمین$') & Filters.chat([CONFIG_ADMIN]),
+        add_admin,
+    )],
+    states={
+        GET_ADMIN_INFO: [MessageHandler(
+            Filters.text & ~Filters.command,
+            get_admin_info,
+        )],
+    },
+    fallbacks=[CommandHandler('cancel', cancel_add_admin)]
+)
+
+remove_admin_handler = ConversationHandler(
+    entry_points=[MessageHandler(
+        Filters.regex('^حذف ادمین$') & Filters.chat([CONFIG_ADMIN]),
+        remove_admin,
+    )],
+    states={
+        GET_ADMIN_CHAT_ID: [MessageHandler(
+            Filters.text & ~Filters.command,
+            get_admin_chat_id,
+        )],
+    },
+    fallbacks=[CommandHandler('cancel', cancel_remove_admin)],
+)
+
 reset_checkout_list_handler = MessageHandler(
-    Filters.regex('^ریست لیست تسویه حساب$') & Filters.chat([settings.CONFIG_ADMIN]),
-    reset_checkout_list,
+    Filters.regex('^ریست لیست تسویه حساب$') & Filters.chat([CONFIG_ADMIN]),
+    reset_admins_checkout,
 )
 
 reset_checkout_list_query_handler = CallbackQueryHandler(handle_reset_checkout_list)
 
 stop_ordering_handler = MessageHandler(
-    Filters.regex('^قفل سفارش$') & Filters.chat([settings.CONFIG_ADMIN]),
+    Filters.regex('^قفل سفارش$') & Filters.chat([CONFIG_ADMIN]),
     stop_ordering,
 )
 
 start_ordering_handler = MessageHandler(
-    Filters.regex('^بازکردن سفارش$') & Filters.chat([settings.CONFIG_ADMIN]),
+    Filters.regex('^بازکردن سفارش$') & Filters.chat([CONFIG_ADMIN]),
     start_ordering,
 )
 
 send_notification_handler = ConversationHandler(
     entry_points=[MessageHandler(
-        Filters.regex('^اطلاعیه$') & Filters.chat([settings.NOTIFY_SENDER]),
+        Filters.regex('^اطلاعیه$') & Filters.chat([NOTIFY_SENDER_CHAT_ID]),
         new_notification,
     )],
     states={
         GET_NOTIFY_MSG: [MessageHandler(
-            Filters.text & ~Filters.regex('^اطلاعیه$') & ~Filters.command & Filters.chat([settings.NOTIFY_SENDER]),
+            Filters.text & ~Filters.command,
             get_notify_msg,
         )]
     },

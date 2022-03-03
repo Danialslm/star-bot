@@ -17,7 +17,7 @@ logging_config = {
 if not env.DEBUG:
     logging_config.update({
         'level': logging.ERROR,
-        'filename': 'log/error.log',
+        'filename': './log/error.log',
     })
 
 logging.basicConfig(**logging_config)

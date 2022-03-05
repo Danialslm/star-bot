@@ -1,6 +1,6 @@
-# Private telegram bot for [STAR team](https://t.me/pubg_star_ir) writen in python and [python-telegram-bot](https://python-telegram-bot.org/) library
+## Private telegram bot for [STAR team](https://t.me/pubg_star_ir) writen in python and [python-telegram-bot](https://python-telegram-bot.org/) library
 
-## This bot made for make easier interaction for between star team staffs for selling uc (Pubg concurrency) .
+### This bot made for make easier interaction for between star team staffs for selling uc (Pubg currency) .
 
 ---
 ## Installation
@@ -13,11 +13,11 @@
 
 ---
 ## Roles
-### the bot can have a config admin which defined in `env/.env` and also have many ordinary admins
+the bot can have a config admin which defined in `env/.env` and also have many ordinary admins
 
-### config admin can define uc list, add or remove admin, lock and unlock order registration process, see and clear the admins' checkout list (how much did the admin sell uc)
-### the ordinary admins can only register orders and view their checkout list
-### at the end the notification sender admin which defined in `env/.env` can only send notification to all admins
+#### config admin can define uc list, add or remove admin, lock and unlock order registration process, see and clear the admins' checkout list (how much did the admin sell uc)
+#### the ordinary admins can only register orders and view their checkout list
+#### at the end the notification sender admin which defined in `env/.env` can only send notification to all admins
 
 ___
 this is my first README.md, so its may not very good :)

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import logging
+from pathlib import Path
 
 from telegram import ReplyKeyboardMarkup
 from telegram.ext import Updater, CommandHandler
@@ -17,7 +18,7 @@ logging_config = {
 if not env.DEBUG:
     logging_config.update({
         'level': logging.ERROR,
-        'filename': './log/error.log',
+        'filename': Path(__file__).parent / 'log/error.log',
     })
 
 logging.basicConfig(**logging_config)

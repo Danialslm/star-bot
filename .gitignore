@@ -1,8 +1,9 @@
 .venv
 .idea
 __pycache__/
-log
+log/*
 .env
 .env.devopment
 .env.production
 star_bot.db
+!.gitkeep

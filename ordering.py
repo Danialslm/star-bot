@@ -221,12 +221,17 @@ def paid(update, context):
     payer_chat_id = update.message.from_user.id
 
     if payer_chat_id in PAYERS_CHAT_ID:
-        text = update.message.reply_to_message.text
+        text = update.message.text
+        order = update.message.reply_to_message.text
         # send paid confirm message to order sender
-        sender_chat_id = int(re.findall(r'فرستنده : (\d+)', text)[0])
-        text += '\n\nاین لیست پرداخت شد✅.'
+        sender_chat_id = int(re.findall(r'فرستنده : (\d+)', order)[0])
 
-        context.bot.send_message(sender_chat_id, text)
+        if text == '✅':
+            order += '\n\nاین لیست پرداخت شد✅.'
+        else:
+            order += '\n\n' + text
+
+        context.bot.send_message(sender_chat_id, order)
 
 
 # handlers
@@ -251,6 +256,6 @@ show_admin_checkout_handler = MessageHandler(
 )
 
 paid_handler = MessageHandler(
-    Filters.regex('^✅$') & Filters.chat([STAR_GROUP_CHAT_ID, ZNXY_GROUP_CHAT_ID]) & Filters.reply,
+    Filters.chat([STAR_GROUP_CHAT_ID, ZNXY_GROUP_CHAT_ID]) & Filters.reply,
     paid,
 )
